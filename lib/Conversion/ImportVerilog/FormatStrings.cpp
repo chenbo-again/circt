@@ -138,6 +138,15 @@ struct FormatStringParser {
         emitLiteral(lit->getValue());
         return success();
       }
+
+      if (slang::ast::NamedValueExpression::isKind(arg.kind)) {
+        if(options.width) 
+          return mlir::emitError(loc)
+                 << "string format specifier with width not supported";
+        
+        fragments.push_back(context.convertRvalueExpression(arg));
+        return success();
+      }
       return mlir::emitError(argLoc)
              << "expression cannot be formatted as string";
 

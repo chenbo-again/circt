@@ -1314,6 +1314,40 @@ def YieldOp : MooreOp<"yield", [
   let hasVerifier = 1;
 }
 
+
+
+def StreamingConcatOp : MooreOp<"streaming_concat", [
+  Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>
+]> {
+  let summary = "streaming like concatenation operation";
+
+  let arguments = (ins 
+    Variadic<AnyType>:$input,
+    UI32Attr:$sliceSize
+  );
+  let results = (outs StreamConcatType:$result);
+  let assemblyFormat = [{
+    $input attr-dict `:` `(` type($input) $sliceSize `)` `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+def StreamingConcatRefOp : MooreOp<"streaming_concat_ref", [
+  Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>
+]> {
+  let summary = "streaming like concatenation reference operation";
+  let arguments = (ins 
+    Variadic<RefType>:$input,
+    UI32Attr:$sliceSize
+  );
+  let results = (outs RefType:$result);
+  let assemblyFormat = [{
+    $input attr-dict `:` `(` type($input) $sliceSize `)` `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Assertions
 //===----------------------------------------------------------------------===//

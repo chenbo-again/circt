@@ -165,9 +165,31 @@ struct StructLikeMember {
   }
 };
 
+struct StreamExprType {
+  // static bool classof(Type type) {
+  //   return llvm::isa<PackedType, StringType, UnpackedStructType, OpenUnpackedArrayType, UnpackedArrayType, AssocArrayType, QueueType>(type);
+  // }
+  Type type;
+
+  // /// Get the value domain of this type.
+  // Domain getDomain() const;
+
+  // /// Get the size of this type in bits.
+  // ///
+  // /// Returns `None` if any of the type's dimensions is unsized.
+  // std::optional<unsigned> getBitSize() const;
+  bool operator==(const StreamExprType &other) const {
+    return type == other.type;
+  }
+};
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 inline llvm::hash_code hash_value(const StructLikeMember &x) {
   return llvm::hash_combine(x.name, x.type);
+}
+
+inline llvm::hash_code hash_value(const StreamExprType &x) {
+  return llvm::hash_combine(x.type);
 }
 
 } // namespace moore

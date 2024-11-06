@@ -458,4 +458,20 @@ def UnionRefType : SpecificRefType<UnionType>;
 def UnpackedUnionRefType : SpecificRefType<UnpackedUnionType>;
 def AnyUnionRefType : SpecificRefType<AnyUnionType>;
 
+//===----------------------------------------------------------------------===//
+// Stream Concat Type
+//===----------------------------------------------------------------------===//
+def StreamConcatType : MooreTypeDef<"StreamConcat", [], "moore::UnpackedType"> {
+  let mnemonic = "stream_concat";
+  let summary = "stream concat result";
+  let description = [{}];
+  let parameters = (ins "unsigned":$sliceSize, ArrayRefParameter<"StreamExprType">:$members);
+
+    // `<` custom<Type>($members) `,` $sliceSize `>`
+  let assemblyFormat = [{
+    `<` custom<StreamExprType>($members) `,` $sliceSize `>`
+  }];
+}
+
+
 #endif // CIRCT_DIALECT_MOORE_MOORETYPES

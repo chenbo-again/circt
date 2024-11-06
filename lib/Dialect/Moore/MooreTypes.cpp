@@ -26,6 +26,28 @@ static LogicalResult parseMembers(AsmParser &parser,
 static void printMembers(AsmPrinter &printer,
                          ArrayRef<StructLikeMember> members);
 
+static LogicalResult parseStreamExprType(AsmParser &parser,
+                                         SmallVector<StreamExprType> &members) {
+  return parser.parseCommaSeparatedList(AsmParser::Delimiter::Braces, [&]() {
+    UnpackedType type;
+    if (parser.parseCustomTypeWithFallback(type))
+      return failure();
+
+    members.push_back({type});
+    return success();
+  });
+}
+static void printStreamExprType(AsmPrinter &printer,
+                                ArrayRef<StreamExprType> members) {
+
+  printer << "{";
+  llvm::interleaveComma(members, printer.getStream(),
+                        [&](const StreamExprType &member) {
+                          printer.printStrippedAttrOrType(member.type);
+                        });
+  printer << "}";
+}
+
 static ParseResult parseMooreType(AsmParser &parser, Type &type);
 static void printMooreType(Type type, AsmPrinter &printer);
 
