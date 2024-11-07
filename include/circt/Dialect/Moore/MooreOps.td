@@ -1357,6 +1357,21 @@ def CoverOp : ImmediateAssertOp<"cover">{
   let summary = "Monitor the coverage information.";
 }
 
+def ConcurrentAssertOp : MooreOp<"assert_property", [HasParent<"ProcedureOp">]>{
+  let summary = "concurrent assertion";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    AnySingleBitType:$cond,
+    OptionalAttr<StrAttr>:$label
+  );
+  let assemblyFormat = [{
+    $cond (`label` $label^)? attr-dict `:` type($cond)
+  }];
+}
+
+
 //===----------------------------------------------------------------------===//
 // Format Strings
 //===----------------------------------------------------------------------===//

@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "slang/ast/Statements.h"
 #include "ImportVerilogInternals.h"
+#include "slang/ast/Expression.h"
+#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/AssertionExpr.h"
+#include "slang/text/SourceLocation.h"
+#include "slang/util/Assert.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace circt;
@@ -544,6 +551,68 @@ struct StmtVisitor {
     } else {
       builder.setInsertionPointToEnd(&exitBlock);
     }
+    return success();
+  }
+  
+  LogicalResult visit(const slang::ast::ConcurrentAssertionStatement &stmt) {
+    ASSERT(slang::ast::AssertionKind::Assert == stmt.assertionKind);
+    
+    if(const auto *simple = stmt.propertySpec.as_if<slang::ast::SimpleAssertionExpr>()) {
+      auto cond = context.convertRvalueExpression(simple->expr);
+      cond = context.convertToBool(cond);
+
+      if (stmt.ifTrue && stmt.ifTrue->as_if<slang::ast::EmptyStatement>()) {
+        ASSERT(stmt.assertionKind == slang::ast::AssertionKind::Assert);
+        builder.create<moore::ConcurrentAssertOp>(loc, cond, StringAttr{});
+      }
+
+      // Regard assertion statements with an action block as the "if-else".
+      cond = builder.create<moore::ConversionOp>(loc, builder.getI1Type(), cond);
+
+      // Create the blocks for the true and false branches, and the exit block.
+      Block &exitBlock = createBlock();
+      Block *falseBlock = stmt.ifFalse ? &createBlock() : nullptr;
+      Block &trueBlock = createBlock();
+      builder.create<cf::CondBranchOp>(loc, cond, &trueBlock,
+                                      falseBlock ? falseBlock : &exitBlock);
+
+      // Generate the true branch.
+      builder.setInsertionPointToEnd(&trueBlock);
+      if (stmt.ifTrue && failed(context.convertStatement(*stmt.ifTrue)))
+        return failure();
+      if (!isTerminated())
+        builder.create<cf::BranchOp>(loc, &exitBlock);
+
+      if (stmt.ifFalse) {
+        // Generate the false branch if present.
+        builder.setInsertionPointToEnd(falseBlock);
+        if (failed(context.convertStatement(*stmt.ifFalse)))
+          return failure();
+        if (!isTerminated())
+          builder.create<cf::BranchOp>(loc, &exitBlock);
+      }
+
+      // If control never reaches the exit block, remove it and mark control flow
+      // as terminated. Otherwise we continue inserting ops in the exit block.
+      if (exitBlock.hasNoPredecessors()) {
+        exitBlock.erase();
+        setTerminated();
+      } else {
+        builder.setInsertionPointToEnd(&exitBlock);
+      }
+      return success();
+    } else if(const auto *clocking = stmt.propertySpec.as_if<slang::ast::ClockingAssertionExpr>()) {
+      ASSERT(slang::ast::SimpleAssertionExpr::isKind(clocking->expr.kind));
+      auto newPropertySpec = slang::ast::SimpleAssertionExpr(clocking->expr.as<slang::ast::SimpleAssertionExpr>());
+
+      // if it's an clocking expr, it should firstly convert it to a simple assertion expr with timing control
+      // and it will be process when convertTimingControl called this function(in SimpleAssertionExpr branch)
+      auto new_stmt = slang::ast::ConcurrentAssertionStatement(stmt.assertionKind, 
+        newPropertySpec, stmt.ifTrue, stmt.ifFalse, stmt.sourceRange);
+
+      return context.convertTimingControl(clocking->clocking, new_stmt);
+    }
+
     return success();
   }
 
