@@ -14,10 +14,16 @@
 #include "circt/Dialect/HW/CustomDirectiveImpl.h"
 #include "circt/Dialect/HW/ModuleImplementation.h"
 #include "circt/Dialect/Moore/MooreAttributes.h"
+#include "circt/Dialect/Moore/MooreTypes.h"
 #include "circt/Support/CustomDirectiveImpl.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace circt;
 using namespace circt::moore;
@@ -984,6 +990,63 @@ LogicalResult UnionExtractRefOp::verify() {
         emitOpError("input type must be UnionType or UnpackedUnionType");
         return failure();
       });
+}
+
+LogicalResult StreamingConcatOp::verify() {
+  for(auto operand : getOperands()) {
+    if(!isa<PackedType, StringType, UnpackedStructType, 
+      OpenUnpackedArrayType, UnpackedArrayType, AssocArrayType, QueueType>(operand.getType())) {
+      emitOpError("not a stream concat type");
+      return failure();
+    }
+  }
+  return success();
+}
+LogicalResult StreamingConcatRefOp::verify() {
+  for(auto operand : getOperands()) {
+    if(!isa<PackedType, StringType, UnpackedStructType, 
+      OpenUnpackedArrayType, UnpackedArrayType, AssocArrayType, QueueType>(cast<RefType>(operand.getType()).getNestedType())) {
+      emitOpError("not a stream concat type");
+      return failure();
+    }
+  }
+  return success();
+}
+
+LogicalResult StreamingConcatOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> loc, ValueRange operands,
+    DictionaryAttr attrs, mlir::OpaqueProperties properties,
+    mlir::RegionRange regions, SmallVectorImpl<Type> &results) {
+  
+  SmallVector<StreamExprType> member;
+  auto sliceSize = properties.as<Properties*>()->getSliceSize();
+  
+  for (auto operand : operands) {
+    auto type = cast<UnpackedType>(operand.getType());
+    member.push_back(StreamExprType{type});
+  }
+  
+  results.push_back(StreamConcatType::get(context, sliceSize.getUInt(), member));
+  return success();
+}
+
+LogicalResult StreamingConcatRefOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> loc, ValueRange operands,
+    DictionaryAttr attrs, mlir::OpaqueProperties properties,
+    mlir::RegionRange regions, SmallVectorImpl<Type> &results) {
+
+  SmallVector<StreamExprType> member;
+  auto sliceSize = properties.as<Properties*>()->getSliceSize();
+
+  
+  for (auto operand : operands) {
+    auto type = cast<UnpackedType>(cast<RefType>(operand.getType()).getNestedType());
+    member.push_back(StreamExprType{type});
+  }
+  
+  results.push_back(RefType::get(StreamConcatType::get(context, sliceSize.getUInt(), member)));
+  return success();
+
 }
 
 //===----------------------------------------------------------------------===//

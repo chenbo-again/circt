@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImportVerilogInternals.h"
+#include "circt/Dialect/Moore/MooreOps.h"
+#include "circt/Dialect/Moore/MooreTypes.h"
+#include "slang/ast/Expression.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace circt;
@@ -95,6 +99,8 @@ struct RvalueExprVisitor {
       mlir::emitError(loc, "delayed assignments not supported");
       return {};
     }
+    // mlir::emitError(loc, "chenbo") << lhs.getType()  << "##########"<< rhs.getType();
+
 
     if (expr.isNonBlocking())
       builder.create<moore::NonBlockingAssignOp>(loc, lhs, rhs);
@@ -790,6 +796,22 @@ struct RvalueExprVisitor {
     assert(count && "Slang guarantees constant non-zero replication count");
     return visitAssignmentPattern(expr, *count);
   }
+  
+  Value visit(const slang::ast::StreamingConcatenationExpression &expr) {
+    SmallVector<Value> arguments;
+    for (auto stream: expr.streams()) {
+      auto value = context.convertRvalueExpression(*stream.operand);
+      // mlir::emitError(value.getLoc(), "expression of type ")
+      //   << value.getType();
+
+      if(!value) {
+        mlir::emitError(loc) << "error occour";
+      }
+      arguments.push_back(value);
+    }
+    return builder.create<moore::StreamingConcatOp>(loc, arguments, 
+      builder.getUI32IntegerAttr(expr.sliceSize));
+  }
 
   /// Emit an error for all other expressions.
   template <typename T>
@@ -927,6 +949,22 @@ struct LvalueExprVisitor {
     return builder.create<moore::DynExtractRefOp>(
         loc, moore::RefType::get(cast<moore::UnpackedType>(type)), value,
         dynLowBit);
+  }
+
+  Value visit(const slang::ast::StreamingConcatenationExpression &expr) {
+    SmallVector<Value> arguments;
+    for (auto stream: expr.streams()) {
+      auto value = context.convertLvalueExpression(*stream.operand);
+      // mlir::emitError(value.getLoc(), "expression of type ")
+      //   << value.getType();
+
+      if(!value) {
+        mlir::emitError(loc) << "error occour";
+      }
+      arguments.push_back(value);
+    }
+    return builder.create<moore::StreamingConcatRefOp>(loc, arguments, 
+      builder.getUI32IntegerAttr(expr.sliceSize));
   }
 
   Value visit(const slang::ast::MemberAccessExpression &expr) {
