@@ -1,0 +1,315 @@
+{
+  "design": {
+    "name": "$root",
+    "kind": "Root",
+    "addr": 5904910464160,
+    "members": [
+      {
+        "name": "",
+        "kind": "CompilationUnit",
+        "addr": 5904909788384
+      },
+      {
+        "name": "tb",
+        "kind": "Instance",
+        "addr": 5904909791768,
+        "body": {
+          "name": "tb",
+          "kind": "InstanceBody",
+          "addr": 5904909788680,
+          "members": [
+            {
+              "name": "a",
+              "kind": "Variable",
+              "addr": 5904909788864,
+              "type": "bit",
+              "lifetime": "Static"
+            },
+            {
+              "name": "b",
+              "kind": "Variable",
+              "addr": 5904909789208,
+              "type": "bit",
+              "lifetime": "Static"
+            },
+            {
+              "name": "c",
+              "kind": "Variable",
+              "addr": 5904909789552,
+              "type": "bit",
+              "lifetime": "Static"
+            },
+            {
+              "name": "d",
+              "kind": "Variable",
+              "addr": 5904909789896,
+              "type": "bit",
+              "lifetime": "Static"
+            },
+            {
+              "name": "clk",
+              "kind": "Variable",
+              "addr": 5904909790240,
+              "type": "bit",
+              "lifetime": "Static"
+            },
+            {
+              "name": "",
+              "kind": "StatementBlock",
+              "addr": 5904909790696,
+              "members": [
+                {
+                  "name": "i",
+                  "kind": "Variable",
+                  "addr": 5904909790848,
+                  "type": "int",
+                  "initializer": {
+                    "kind": "IntegerLiteral",
+                    "type": "int",
+                    "value": "0",
+                    "constant": "0"
+                  },
+                  "lifetime": "Automatic"
+                }
+              ]
+            },
+            {
+              "name": "",
+              "kind": "ProceduralBlock",
+              "addr": 5904909790584,
+              "procedureKind": "Initial",
+              "body": {
+                "kind": "Block",
+                "blockKind": "Sequential",
+                "body": {
+                  "kind": "Block",
+                  "blockKind": "Sequential",
+                  "block": "5904909790696 ",
+                  "body": {
+                    "kind": "List",
+                    "list": [
+                      {
+                        "kind": "VariableDeclaration",
+                        "symbol": "5904909790848 i"
+                      },
+                      {
+                        "kind": "ForLoop",
+                        "initializers": [
+                        ],
+                        "stopExpr": {
+                          "kind": "BinaryOp",
+                          "type": "bit",
+                          "op": "LessThan",
+                          "left": {
+                            "kind": "NamedValue",
+                            "type": "int",
+                            "symbol": "5904909790848 i"
+                          },
+                          "right": {
+                            "kind": "IntegerLiteral",
+                            "type": "int",
+                            "value": "20",
+                            "constant": "20"
+                          }
+                        },
+                        "steps": [
+                          {
+                            "kind": "UnaryOp",
+                            "type": "int",
+                            "op": "Postincrement",
+                            "operand": {
+                              "kind": "NamedValue",
+                              "type": "int",
+                              "symbol": "5904909790848 i"
+                            }
+                          }
+                        ],
+                        "body": {
+                          "kind": "Block",
+                          "blockKind": "Sequential",
+                          "body": {
+                            "kind": "Timed",
+                            "timing": {
+                              "kind": "SignalEvent",
+                              "expr": {
+                                "kind": "NamedValue",
+                                "type": "bit",
+                                "symbol": "5904909790240 clk"
+                              },
+                              "edge": "PosEdge"
+                            },
+                            "stmt": {
+                              "kind": "Empty"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "name": "s_ab",
+              "kind": "Sequence",
+              "addr": 5904909791248
+            },
+            {
+              "name": "s_cd",
+              "kind": "Sequence",
+              "addr": 5904909791384
+            },
+            {
+              "name": "p_expr",
+              "kind": "Property",
+              "addr": 5904909791520
+            },
+            {
+              "name": "",
+              "kind": "ProceduralBlock",
+              "addr": 5904909791656,
+              "procedureKind": "Always",
+              "body": {
+                "kind": "ConcurrentAssertion",
+                "propertySpec": {
+                  "kind": "Simple",
+                  "expr": {
+                    "kind": "AssertionInstance",
+                    "type": "property",
+                    "symbol": "5904909791520 p_expr",
+                    "body": {
+                      "kind": "Clocking",
+                      "clocking": {
+                        "kind": "SignalEvent",
+                        "expr": {
+                          "kind": "NamedValue",
+                          "type": "bit",
+                          "symbol": "5904909790240 clk"
+                        },
+                        "edge": "PosEdge"
+                      },
+                      "expr": {
+                        "kind": "SequenceConcat",
+                        "elements": [
+                          {
+                            "sequence": {
+                              "kind": "Simple",
+                              "expr": {
+                                "kind": "AssertionInstance",
+                                "type": "sequence",
+                                "symbol": "5904909791248 s_ab",
+                                "body": {
+                                  "kind": "SequenceConcat",
+                                  "elements": [
+                                    {
+                                      "sequence": {
+                                        "kind": "Simple",
+                                        "expr": {
+                                          "kind": "NamedValue",
+                                          "type": "bit",
+                                          "symbol": "5904909788864 a"
+                                        }
+                                      },
+                                      "min": 0,
+                                      "max": 0
+                                    },
+                                    {
+                                      "sequence": {
+                                        "kind": "Simple",
+                                        "expr": {
+                                          "kind": "NamedValue",
+                                          "type": "bit",
+                                          "symbol": "5904909789208 b"
+                                        }
+                                      },
+                                      "min": 1,
+                                      "max": 1
+                                    }
+                                  ]
+                                },
+                                "isRecursiveProperty": false,
+                                "localVars": [
+                                ]
+                              }
+                            },
+                            "min": 0,
+                            "max": 0
+                          },
+                          {
+                            "sequence": {
+                              "kind": "Simple",
+                              "expr": {
+                                "kind": "AssertionInstance",
+                                "type": "sequence",
+                                "symbol": "5904909791384 s_cd",
+                                "body": {
+                                  "kind": "SequenceConcat",
+                                  "elements": [
+                                    {
+                                      "sequence": {
+                                        "kind": "Simple",
+                                        "expr": {
+                                          "kind": "NamedValue",
+                                          "type": "bit",
+                                          "symbol": "5904909789552 c"
+                                        }
+                                      },
+                                      "min": 0,
+                                      "max": 0
+                                    },
+                                    {
+                                      "sequence": {
+                                        "kind": "Simple",
+                                        "expr": {
+                                          "kind": "NamedValue",
+                                          "type": "bit",
+                                          "symbol": "5904909789896 d"
+                                        }
+                                      },
+                                      "min": 2,
+                                      "max": 2
+                                    }
+                                  ]
+                                },
+                                "isRecursiveProperty": false,
+                                "localVars": [
+                                ]
+                              }
+                            },
+                            "min": 1,
+                            "max": 1
+                          }
+                        ]
+                      }
+                    },
+                    "isRecursiveProperty": false,
+                    "localVars": [
+                    ]
+                  }
+                },
+                "ifTrue": {
+                  "kind": "Empty"
+                },
+                "assertionKind": "Assert"
+              }
+            }
+          ],
+          "definition": "5904910126080 tb"
+        },
+        "connections": [
+        ]
+      }
+    ]
+  },
+  "definitions": [
+    {
+      "name": "tb",
+      "kind": "Definition",
+      "addr": 5904910126080,
+      "defaultNetType": "5904910464800 wire",
+      "definitionKind": "Module",
+      "defaultLifetime": "Static",
+      "unconnectedDrive": "None"
+    }
+  ]
+}

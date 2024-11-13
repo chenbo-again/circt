@@ -1,0 +1,89 @@
+module {
+  moore.module @Expressions() {
+    moore.procedure initial {
+      %j = moore.variable : <i32>
+      %a = moore.variable : <i32>
+      %b = moore.variable : <i32>
+      %c = moore.variable : <i32>
+      %up = moore.variable : <uarray<4 x l11>>
+      %p1 = moore.variable : <l11>
+      %p2 = moore.variable : <l11>
+      %p3 = moore.variable : <l11>
+      %p4 = moore.variable : <l11>
+      %yy = moore.variable : <i96>
+      %dd = moore.variable : <i100>
+      %0 = moore.read %j : <i32>
+      moore.blocking_assign %a, %0 : i32
+      %1 = moore.read %j : <i32>
+      moore.blocking_assign %a, %1 : i32
+      %2 = moore.read %j : <i32>
+      %3 = moore.extract %2 from 0 : i32 -> i8
+      %4 = moore.extract %2 from 8 : i32 -> i8
+      %5 = moore.extract %2 from 16 : i32 -> i8
+      %6 = moore.extract %2 from 24 : i32 -> i8
+      %7 = moore.concat %6, %5, %4, %3 : (!moore.i8, !moore.i8, !moore.i8, !moore.i8) -> i32
+      moore.blocking_assign %a, %7 : i32
+      %8 = moore.read %j : <i32>
+      %9 = moore.extract %8 from 0 : i32 -> i16
+      %10 = moore.extract %8 from 16 : i32 -> i16
+      %11 = moore.concat %10, %9 : (!moore.i16, !moore.i16) -> i32
+      moore.blocking_assign %a, %11 : i32
+      %12 = moore.constant 53 : i8
+      %13 = moore.extract %12 from 0 : i8 -> i1
+      %14 = moore.extract %12 from 1 : i8 -> i1
+      %15 = moore.extract %12 from 2 : i8 -> i1
+      %16 = moore.extract %12 from 3 : i8 -> i1
+      %17 = moore.extract %12 from 4 : i8 -> i1
+      %18 = moore.extract %12 from 5 : i8 -> i1
+      %19 = moore.extract %12 from 6 : i8 -> i1
+      %20 = moore.extract %12 from 7 : i8 -> i1
+      %21 = moore.concat %20, %19, %18, %17, %16, %15, %14, %13 : (!moore.i1, !moore.i1, !moore.i1, !moore.i1, !moore.i1, !moore.i1, !moore.i1, !moore.i1) -> i8
+      %22 = moore.conversion %21 : !moore.i8 -> !moore.i32
+      moore.blocking_assign %a, %22 : i32
+      %23 = moore.constant -11 : i6
+      %24 = moore.extract %23 from 0 : i6 -> i4
+      %25 = moore.extract %23 from 4 : i6 -> i2
+      %26 = moore.concat %25, %24 : (!moore.i2, !moore.i4) -> i6
+      %27 = moore.conversion %26 : !moore.i6 -> !moore.i32
+      moore.blocking_assign %a, %27 : i32
+      %28 = moore.constant -11 : i6
+      %29 = moore.conversion %28 : !moore.i6 -> !moore.i32
+      moore.blocking_assign %a, %29 : i32
+      %30 = moore.constant -3 : i4
+      %31 = moore.extract %30 from 0 : i4 -> i1
+      %32 = moore.extract %30 from 1 : i4 -> i1
+      %33 = moore.extract %30 from 2 : i4 -> i1
+      %34 = moore.extract %30 from 3 : i4 -> i1
+      %35 = moore.concat %34, %33, %32, %31 : (!moore.i1, !moore.i1, !moore.i1, !moore.i1) -> i4
+      %36 = moore.extract %35 from 0 : i4 -> i2
+      %37 = moore.extract %35 from 2 : i4 -> i2
+      %38 = moore.concat %37, %36 : (!moore.i2, !moore.i2) -> i4
+      %39 = moore.conversion %38 : !moore.i4 -> !moore.i32
+      moore.blocking_assign %a, %39 : i32
+      %40 = moore.read %a : <i32>
+      %41 = moore.read %b : <i32>
+      %42 = moore.read %c : <i32>
+      %43 = moore.concat %40, %41, %42 : (!moore.i32, !moore.i32, !moore.i32) -> i96
+      moore.blocking_assign %yy, %43 : i96
+      %44 = moore.read %a : <i32>
+      %45 = moore.read %b : <i32>
+      %46 = moore.read %c : <i32>
+      %47 = moore.concat %44, %45, %46 : (!moore.i32, !moore.i32, !moore.i32) -> i96
+      %48 = moore.conversion %47 : !moore.i96 -> !moore.i100
+      moore.blocking_assign %dd, %48 : i100
+      %49 = moore.concat_ref %a, %b, %c : (!moore.ref<i32>, !moore.ref<i32>, !moore.ref<i32>) -> <i96>
+      %50 = moore.constant 1 : i96
+      moore.blocking_assign %49, %50 : i96
+      %51 = moore.concat_ref %a, %b, %c : (!moore.ref<i32>, !moore.ref<i32>, !moore.ref<i32>) -> <i96>
+      %52 = moore.constant 31 : i100
+      %53 = moore.conversion %52 : !moore.i100 -> !moore.i96
+      moore.blocking_assign %51, %53 : i96
+      %54 = moore.concat_ref %p1, %p2, %p3, %p4 : (!moore.ref<l11>, !moore.ref<l11>, !moore.ref<l11>, !moore.ref<l11>) -> <l44>
+      %55 = moore.read %up : <uarray<4 x l11>>
+      %56 = moore.conversion %55 : !moore.uarray<4 x l11> -> !moore.l44
+      moore.blocking_assign %54, %56 : l44
+      moore.return
+    }
+    moore.output
+  }
+}

@@ -1,0 +1,676 @@
+{
+  "design": {
+    "name": "$root",
+    "kind": "Root",
+    "addr": 2391694390400,
+    "members": [
+      {
+        "name": "",
+        "kind": "CompilationUnit",
+        "addr": 2391694841056
+      },
+      {
+        "name": "Expressions",
+        "kind": "Instance",
+        "addr": 2391694845648,
+        "body": {
+          "name": "Expressions",
+          "kind": "InstanceBody",
+          "addr": 2391694841352,
+          "members": [
+            {
+              "name": "",
+              "kind": "StatementBlock",
+              "addr": 2391694841648,
+              "members": [
+                {
+                  "name": "j",
+                  "kind": "Variable",
+                  "addr": 2391694841800,
+                  "type": "int",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "a",
+                  "kind": "Variable",
+                  "addr": 2391694842144,
+                  "type": "int",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "b",
+                  "kind": "Variable",
+                  "addr": 2391694842488,
+                  "type": "int",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "c",
+                  "kind": "Variable",
+                  "addr": 2391694842832,
+                  "type": "int",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "up",
+                  "kind": "Variable",
+                  "addr": 2391694843176,
+                  "type": "logic[10:0]$[3:0]",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "p1",
+                  "kind": "Variable",
+                  "addr": 2391694843520,
+                  "type": "logic[11:1]",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "p2",
+                  "kind": "Variable",
+                  "addr": 2391694843920,
+                  "type": "logic[11:1]",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "p3",
+                  "kind": "Variable",
+                  "addr": 2391694844264,
+                  "type": "logic[11:1]",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "p4",
+                  "kind": "Variable",
+                  "addr": 2391694844608,
+                  "type": "logic[11:1]",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "yy",
+                  "kind": "Variable",
+                  "addr": 2391694844952,
+                  "type": "bit[96:1]",
+                  "lifetime": "Static"
+                },
+                {
+                  "name": "dd",
+                  "kind": "Variable",
+                  "addr": 2391694845296,
+                  "type": "bit[99:0]",
+                  "lifetime": "Static"
+                }
+              ]
+            },
+            {
+              "name": "",
+              "kind": "ProceduralBlock",
+              "addr": 2391694841536,
+              "procedureKind": "Initial",
+              "body": {
+                "kind": "Block",
+                "blockKind": "Sequential",
+                "block": "2391694841648 ",
+                "body": {
+                  "kind": "List",
+                  "list": [
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694841800 j"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694842144 a"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694842488 b"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694842832 c"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694843176 up"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694843520 p1"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694843920 p2"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694844264 p3"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694844608 p4"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694844952 yy"
+                    },
+                    {
+                      "kind": "VariableDeclaration",
+                      "symbol": "2391694845296 dd"
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 0,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694841800 j"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 0,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694841800 j"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 8,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694841800 j"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 16,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694841800 j"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 1,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "IntegerLiteral",
+                                  "type": "bit[7:0]",
+                                  "value": "8'd53",
+                                  "constant": "8'd53"
+                                }
+                              }
+                            ],
+                            "constant": "'{1'b1,1'b0,1'b1,1'b0,1'b1,1'b1,1'b0,1'b0}"
+                          },
+                          "constant": "-1409286144"
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 4,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "IntegerLiteral",
+                                  "type": "bit[5:0]",
+                                  "value": "6'b110101",
+                                  "constant": "6'b110101"
+                                }
+                              }
+                            ],
+                            "constant": "'{4'b101,2'b11}"
+                          },
+                          "constant": "1543503872"
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 0,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "IntegerLiteral",
+                                  "type": "bit[5:0]",
+                                  "value": "6'b110101",
+                                  "constant": "6'b110101"
+                                }
+                              }
+                            ],
+                            "constant": "'{6'b110101}"
+                          },
+                          "constant": "-738197504"
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "int",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "int",
+                          "symbol": "2391694842144 a"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "int",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 2,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "Streaming",
+                                  "type": "void",
+                                  "sliceSize": 1,
+                                  "streams": [
+                                    {
+                                      "operand": {
+                                        "kind": "IntegerLiteral",
+                                        "type": "bit[3:0]",
+                                        "value": "4'b1101",
+                                        "constant": "4'b1101"
+                                      }
+                                    }
+                                  ],
+                                  "constant": "'{1'b1,1'b0,1'b1,1'b1}"
+                                }
+                              }
+                            ],
+                            "constant": "'{1'b1,1'b1,1'b1,1'b0}"
+                          },
+                          "constant": "-536870912"
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "bit[96:1]",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "bit[96:1]",
+                          "symbol": "2391694844952 yy"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "bit[96:1]",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 0,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694842144 a"
+                                }
+                              },
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694842488 b"
+                                }
+                              },
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694842832 c"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "bit[99:0]",
+                        "left": {
+                          "kind": "NamedValue",
+                          "type": "bit[99:0]",
+                          "symbol": "2391694845296 dd"
+                        },
+                        "right": {
+                          "kind": "Conversion",
+                          "type": "bit[99:0]",
+                          "operand": {
+                            "kind": "Streaming",
+                            "type": "void",
+                            "sliceSize": 0,
+                            "streams": [
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694842144 a"
+                                }
+                              },
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694842488 b"
+                                }
+                              },
+                              {
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "int",
+                                  "symbol": "2391694842832 c"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "void",
+                        "left": {
+                          "kind": "Streaming",
+                          "type": "void",
+                          "sliceSize": 0,
+                          "streams": [
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "int",
+                                "symbol": "2391694842144 a"
+                              }
+                            },
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "int",
+                                "symbol": "2391694842488 b"
+                              }
+                            },
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "int",
+                                "symbol": "2391694842832 c"
+                              }
+                            }
+                          ]
+                        },
+                        "right": {
+                          "kind": "IntegerLiteral",
+                          "type": "bit[95:0]",
+                          "value": "96'h1",
+                          "constant": "96'h1"
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "void",
+                        "left": {
+                          "kind": "Streaming",
+                          "type": "void",
+                          "sliceSize": 0,
+                          "streams": [
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "int",
+                                "symbol": "2391694842144 a"
+                              }
+                            },
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "int",
+                                "symbol": "2391694842488 b"
+                              }
+                            },
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "int",
+                                "symbol": "2391694842832 c"
+                              }
+                            }
+                          ]
+                        },
+                        "right": {
+                          "kind": "IntegerLiteral",
+                          "type": "bit[99:0]",
+                          "value": "100'h1f",
+                          "constant": "100'h1f"
+                        },
+                        "isNonBlocking": false
+                      }
+                    },
+                    {
+                      "kind": "ExpressionStatement",
+                      "expr": {
+                        "kind": "Assignment",
+                        "type": "void",
+                        "left": {
+                          "kind": "Streaming",
+                          "type": "void",
+                          "sliceSize": 0,
+                          "streams": [
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "logic[11:1]",
+                                "symbol": "2391694843520 p1"
+                              }
+                            },
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "logic[11:1]",
+                                "symbol": "2391694843920 p2"
+                              }
+                            },
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "logic[11:1]",
+                                "symbol": "2391694844264 p3"
+                              }
+                            },
+                            {
+                              "operand": {
+                                "kind": "NamedValue",
+                                "type": "logic[11:1]",
+                                "symbol": "2391694844608 p4"
+                              }
+                            }
+                          ]
+                        },
+                        "right": {
+                          "kind": "NamedValue",
+                          "type": "logic[10:0]$[3:0]",
+                          "symbol": "2391694843176 up"
+                        },
+                        "isNonBlocking": false
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "definition": "2391693987072 Expressions"
+        },
+        "connections": [
+        ]
+      }
+    ]
+  },
+  "definitions": [
+    {
+      "name": "Expressions",
+      "kind": "Definition",
+      "addr": 2391693987072,
+      "defaultNetType": "2391694391040 wire",
+      "definitionKind": "Module",
+      "defaultLifetime": "Static",
+      "unconnectedDrive": "None"
+    }
+  ]
+}
