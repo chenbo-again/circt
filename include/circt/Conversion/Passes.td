@@ -582,7 +582,7 @@ def LowerHWToSV : Pass<"lower-hw-to-sv", "hw::HWModuleOp"> {
 // HWToBTOR2
 //===----------------------------------------------------------------------===//
 
-def ConvertHWToBTOR2 : Pass<"convert-hw-to-btor2", "hw::HWModuleOp"> {
+def ConvertHWToBTOR2 : Pass<"convert-hw-to-btor2", "mlir::ModuleOp"> {
   let summary = "Convert HW to BTOR2";
   let description = [{
     This pass converts a HW module into a state transition system that is then
@@ -766,7 +766,7 @@ def LowerSeqToSV: Pass<"lower-seq-to-sv",  "mlir::ModuleOp"> {
     Option<"emitSeparateAlwaysBlocks", "emit-separate-always-blocks", "bool", "false",
            "Emit assigments to registers in separate always blocks">,
     Option<"lowerToAlwaysFF", "lower-to-always-ff", "bool", "true",
-           "Place assignments to registers into `always_ff` blocks">
+           "Place assignments to registers into `always_ff` blocks if possible">
   ];
   let statistics = [
     Statistic<"numSubaccessRestored", "num-subaccess-restored",
@@ -807,5 +807,21 @@ def ConvertCombToAIG: Pass<"convert-comb-to-aig",  "hw::HWModuleOp"> {
     "circt::aig::AIGDialect",
   ];
 }
+
+//===----------------------------------------------------------------------===//
+// ConvertAIGToComb
+//===----------------------------------------------------------------------===//
+
+def ConvertAIGToComb: Pass<"convert-aig-to-comb", "hw::HWModuleOp"> {
+  let summary = "Lower AIG ops to Comb ops";
+  let description = [{
+    This pass converts AIG operations to Comb operations. This is mostly
+    used for verifying post-synthesis results.
+  }];
+  let dependentDialects = [
+    "circt::comb::CombDialect", "circt::hw::HWDialect"
+  ];
+}
+
 
 #endif // CIRCT_CONVERSION_PASSES_TD

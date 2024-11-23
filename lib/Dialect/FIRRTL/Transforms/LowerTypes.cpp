@@ -253,9 +253,10 @@ static MemOp cloneMemWithNewType(ImplicitLocOpBuilder *b, MemOp op,
   // It's easier to duplicate the old annotations, then fix and filter them.
   auto newMem = b->create<MemOp>(
       ports, op.getReadLatency(), op.getWriteLatency(), op.getDepth(),
-      op.getRuw(), portNames, (op.getName() + field.suffix).str(),
-      op.getNameKind(), op.getAnnotations().getValue(),
-      op.getPortAnnotations().getValue(), op.getInnerSymAttr());
+      op.getRuw(), b->getArrayAttr(portNames),
+      (op.getName() + field.suffix).str(), op.getNameKind(),
+      op.getAnnotations(), op.getPortAnnotations(), op.getInnerSymAttr(),
+      op.getInitAttr(), op.getPrefixAttr());
 
   if (op.getInnerSym()) {
     op.emitError("cannot split memory with symbol present");
@@ -1146,8 +1147,9 @@ bool TypeLoweringVisitor::visitDecl(FModuleOp module) {
   auto newArgs = llvm::map_to_vector(module.getPorts(), [](auto pi) {
     return PortInfoWithIP{pi, std::nullopt};
   });
-  for (size_t argIndex = 0, argsRemoved = 0; argIndex < newArgs.size();
-       ++argIndex) {
+
+  size_t argsRemoved = 0;
+  for (size_t argIndex = 0; argIndex < newArgs.size(); ++argIndex) {
     SmallVector<Value> lowerings;
     if (lowerArg(module, argIndex, argsRemoved, newArgs, lowerings)) {
       auto arg = module.getArgument(argIndex);
@@ -1160,10 +1162,17 @@ bool TypeLoweringVisitor::visitDecl(FModuleOp module) {
   }
 
   // Remove block args that have been lowered.
-  body->eraseArguments(argsToRemove);
-  for (auto deadArg = argsToRemove.find_last(); deadArg != -1;
-       deadArg = argsToRemove.find_prev(deadArg))
-    newArgs.erase(newArgs.begin() + deadArg);
+  if (argsRemoved != 0) {
+    body->eraseArguments(argsToRemove);
+    size_t size = newArgs.size();
+    for (size_t src = 0, dst = 0; src < size; ++src) {
+      if (argsToRemove[src])
+        continue;
+      newArgs[dst] = newArgs[src];
+      ++dst;
+    }
+    newArgs.erase(newArgs.end() - argsRemoved, newArgs.end());
+  }
 
   SmallVector<NamedAttribute, 8> newModuleAttrs;
 
@@ -1359,8 +1368,13 @@ bool TypeLoweringVisitor::visitExpr(BitCastOp op) {
       // Take the first field, or else Cat the previous fields with this field.
       if (uptoBits == 0)
         srcLoweredVal = src;
-      else
-        srcLoweredVal = builder->create<CatPrimOp>(src, srcLoweredVal);
+      else {
+        if (type_isa<BundleType>(op.getInput().getType())) {
+          srcLoweredVal = builder->create<CatPrimOp>(srcLoweredVal, src);
+        } else {
+          srcLoweredVal = builder->create<CatPrimOp>(src, srcLoweredVal);
+        }
+      }
       // Record the total bits already accumulated.
       uptoBits += fieldBitwidth;
     }
@@ -1372,6 +1386,7 @@ bool TypeLoweringVisitor::visitExpr(BitCastOp op) {
   if (type_isa<BundleType, FVectorType>(op.getResult().getType())) {
     // uptoBits is used to keep track of the bits that have been extracted.
     size_t uptoBits = 0;
+    auto aggregateBits = *getBitWidth(op.getResult().getType());
     auto clone = [&](const FlatBundleFieldEntry &field,
                      ArrayAttr attrs) -> Value {
       // All the fields must have valid bitwidth, a requirement for BitCastOp.
@@ -1383,8 +1398,15 @@ bool TypeLoweringVisitor::visitExpr(BitCastOp op) {
 
       // Assign the field to the corresponding bits from the input.
       // Bitcast the field, incase its an aggregate type.
-      auto extractBits = builder->create<BitsPrimOp>(
-          srcLoweredVal, uptoBits + fieldBits - 1, uptoBits);
+      BitsPrimOp extractBits;
+      if (type_isa<BundleType>(op.getResult().getType())) {
+        extractBits = builder->create<BitsPrimOp>(
+            srcLoweredVal, aggregateBits - uptoBits - 1,
+            aggregateBits - uptoBits - fieldBits);
+      } else {
+        extractBits = builder->create<BitsPrimOp>(
+            srcLoweredVal, uptoBits + fieldBits - 1, uptoBits);
+      }
       uptoBits += fieldBits;
       return builder->create<BitCastOp>(field.type, extractBits);
     };
