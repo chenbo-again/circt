@@ -556,40 +556,8 @@ struct StmtVisitor {
   }
   
   LogicalResult visit(const slang::ast::ConcurrentAssertionStatement &stmt) {
-    if(const auto *simple = stmt.propertySpec.as_if<slang::ast::SimpleAssertionExpr>()) {
-      const auto immAssertion = slang::ast::ImmediateAssertionStatement(stmt.assertionKind, simple->expr, stmt.ifTrue, stmt.ifFalse, false, false, stmt.sourceRange);
-      return visit(immAssertion);
-      
-    } else if(const auto *clocking = stmt.propertySpec.as_if<slang::ast::ClockingAssertionExpr>()) {
-      ASSERT(slang::ast::SimpleAssertionExpr::isKind(clocking->expr.kind));
-      auto newPropertySpec = slang::ast::SimpleAssertionExpr(clocking->expr.as<slang::ast::SimpleAssertionExpr>());
-
-      // if it's an clocking expr, it should firstly convert it to a simple assertion expr with timing control
-      // and it will be process when convertTimingControl called this function(in SimpleAssertionExpr branch)
-      
-      // create a always block
-      auto procOp = builder.create<moore::ProcedureOp>(
-          loc, moore::ProcedureKind::Always);
-      OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointToEnd(&procOp.getBody().emplaceBlock());
-      Context::ValueSymbolScope scope(context.valueSymbols);
-      // if (failed(context.convertStatement(procNode.getBody())))
-      //   return failure();
-      
-      auto newStmt = slang::ast::ConcurrentAssertionStatement(stmt.assertionKind, 
-        newPropertySpec, stmt.ifTrue, stmt.ifFalse, stmt.sourceRange);
-      
-      if(failed(context.convertTimingControl(clocking->clocking, newStmt))) {
-        return failure();
-      }
-
-      if (builder.getBlock())
-        builder.create<moore::ReturnOp>(loc);
-      return success();
-    } else {
-      emitError(loc) << "do not support that kind of concurrent assertion";
-    }
-
+    emitError(loc) << "error ConcurrentAssertionStatement";
+    auto assertionExprVisitor = context.convertAssertionExpression(stmt.propertySpec);
     return success();
   }
 

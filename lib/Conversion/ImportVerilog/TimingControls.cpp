@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImportVerilogInternals.h"
+#include "mlir/IR/Diagnostics.h"
 #include "slang/ast/TimingControl.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace circt;
 using namespace ImportVerilog;
@@ -78,6 +80,11 @@ struct DelayControlVisitor {
   Context &context;
   Location loc;
   OpBuilder &builder;
+
+  // LogicalResult visit(const slang::ast::DelayControl& delay) {
+  //   mlir::emitError(loc) << "not implement DelayControl";
+  //   return success();
+  // }
 
   // Emit an error for all other timing controls.
   template <typename T>

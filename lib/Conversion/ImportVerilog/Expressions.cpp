@@ -7,7 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImportVerilogInternals.h"
+#include "circt/Dialect/Moore/MooreOps.h"
+#include "circt/Dialect/Moore/MooreTypes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Types.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/TimingControl.h"
+#include "slang/ast/expressions/AssertionExpr.h"
+#include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace circt;
@@ -787,6 +797,52 @@ struct RvalueExprVisitor {
     return visitAssignmentPattern(expr, *count);
   }
 
+
+  Value visit(const slang::ast::AssertionInstanceExpression &expr) {
+    // if(auto property = expr.symbol.as_if<slang::ast::PropertySymbol>()) {
+    //   loc = context.convertLocation(property->location);
+    // } else if(auto sequence = expr.symbol.as_if<slang::ast::SequenceSymbol>()) {
+    //   loc = context.convertLocation(sequence->location);
+    // }
+  
+    context.convertAssertionExpression(expr.body);
+    // for (auto sym : localVars) {
+    //     auto dt = sym->getDeclaredType();
+    //     ASSERT(dt);
+    //     if (auto init = dt->getInitializer())
+    //         init->visit(visitor);
+    // }
+
+    mlir::emitError(loc) << "AssertionInstanceExpression not implement";
+    return {};
+  }
+  
+
+  Value visit(const slang::ast::SimpleAssertionExpr &assertionExpr) {
+    auto value = context.convertRvalueExpression(assertionExpr.expr);
+
+    mlir::emitError(loc) << "SimpleAssertionExpr not implement";
+    auto i1type = mlir::IntegerType::get(context.getContext(), 1);
+    auto i1Value = builder.create<moore::MooreToI1>(loc, i1type, value);
+    return i1Value;
+  }
+  
+  Value visit(const slang::ast::SequenceConcatExpr &assertionExpr) {
+    mlir::emitError(loc) << "SequenceConcatExpr not implement";
+    for (auto& elem : assertionExpr.elements) {
+      auto value = context.convertAssertionExpression(*elem.sequence);
+    }
+    return {};
+  }
+
+  Value visit(const slang::ast::ClockingAssertionExpr &assertionExpr) {
+    mlir::emitError(loc) << "ClockingAssertionExpr not implement";
+    
+    // clocking.visit(visitor);
+    context.convertAssertionExpression(assertionExpr.expr);
+    return {};
+  }
+
   /// Emit an error for all other expressions.
   template <typename T>
   Value visit(T &&node) {
@@ -797,6 +853,10 @@ struct RvalueExprVisitor {
 
   Value visitInvalid(const slang::ast::Expression &expr) {
     mlir::emitError(loc, "invalid expression");
+    return {};
+  }
+  Value visitInvalid(const slang::ast::AssertionExpr &expr) {
+    mlir::emitError(loc, "invalid assertion expression");
     return {};
   }
 };
@@ -1100,4 +1160,12 @@ Value Context::materializeConversion(Type type, Value value, bool isSigned,
   if (value.getType() != type)
     value = builder.create<moore::ConversionOp>(loc, type, value);
   return value;
+}
+
+Value Context::convertAssertionExpression(const slang::ast::AssertionExpr &expr) {
+  auto loc = convertLocation(expr.syntax->sourceRange());
+
+
+  auto visitor = RvalueExprVisitor(*this, loc);
+  return expr.visit(visitor);
 }

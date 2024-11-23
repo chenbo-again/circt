@@ -20,6 +20,8 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
+include "circt/Dialect/LTL/LTLDialect.td"
+include "circt/Dialect/LTL/LTLTypes.td"
 
 // Base class for the operations in this dialect.
 class MooreOp<string mnemonic, list<Trait> traits = []> :
@@ -1416,6 +1418,35 @@ def AssumeOp : ImmediateAssertOp<"assume">{
 def CoverOp : ImmediateAssertOp<"cover">{
   let summary = "Monitor the coverage information.";
 }
+
+class ClockedAssertLikeOp<string mnemonic, list<Trait> traits = []> :
+  MooreOp<mnemonic, traits> {
+  let arguments = (ins
+                      UnpackedType: $input,
+                      EdgeAttr: $edge, 
+                      LTLAnyPropertyType:$property,
+                      Optional<BitType>:$enable,
+                      OptionalAttr<StrAttr>:$label);
+  let assemblyFormat = [{
+    $property (`if` $enable^)? `,` $edge $input 
+    (`label` $label^)? attr-dict `:` type($property)
+  }];
+}
+
+def MooreToI1 : MooreOp<"moore_to_I1", []>{
+  let summary = "moore single bit to I1";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    AnySingleBitType:$input
+  );
+  let results = (outs I1:$result);
+  let assemblyFormat = [{
+    $input attr-dict `:` type($input)
+  }];
+}
+
 
 def ConcurrentAssertOp : MooreOp<"assert_property", [HasParent<"ProcedureOp">]>{
   let summary = "concurrent assertion";

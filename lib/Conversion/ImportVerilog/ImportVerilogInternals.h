@@ -125,6 +125,7 @@ struct Context {
   /// one type to another.
   Value materializeConversion(Type type, Value value, bool isSigned,
                               Location loc);
+  Value convertAssertionExpression(const slang::ast::AssertionExpr &expr);
 
   /// Helper function to materialize an `SVInt` as an SSA value.
   Value materializeSVInt(const slang::SVInt &svint,
