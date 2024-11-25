@@ -2,13 +2,6 @@ module tb;
   bit a, b, c, d;
   bit clk;
 
-
-  initial begin
-    for (int i = 0; i < 20; i++) begin
-      @(posedge clk);
-    end
-  end
-
   sequence s_ab;
     a ##1 b;
   endsequence

@@ -86,6 +86,7 @@ struct Context {
   /// generally a good idea to pass in a location.
   Type convertType(const slang::ast::Type &type, LocationAttr loc = {});
   Type convertType(const slang::ast::DeclaredType &type);
+  static moore::Edge convertEdgeKind(const slang::ast::EdgeKind edge);
 
   /// Convert hierarchy and structure AST nodes to MLIR ops.
   LogicalResult convertCompilation();

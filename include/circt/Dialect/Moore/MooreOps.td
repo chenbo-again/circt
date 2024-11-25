@@ -1419,46 +1419,111 @@ def CoverOp : ImmediateAssertOp<"cover">{
   let summary = "Monitor the coverage information.";
 }
 
-class ClockedAssertLikeOp<string mnemonic, list<Trait> traits = []> :
-  MooreOp<mnemonic, traits> {
+class ConcurrentAssertLikeOp<string mnemonic, list<Trait> traits = []> : 
+    MooreOp<mnemonic, traits # [HasParent<"ProcedureOp">]>{
   let arguments = (ins
-                      UnpackedType: $input,
-                      EdgeAttr: $edge, 
-                      LTLAnyPropertyType:$property,
-                      Optional<BitType>:$enable,
-                      OptionalAttr<StrAttr>:$label);
-  let assemblyFormat = [{
-    $property (`if` $enable^)? `,` $edge $input 
-    (`label` $label^)? attr-dict `:` type($property)
-  }];
-}
-
-def MooreToI1 : MooreOp<"moore_to_I1", []>{
-  let summary = "moore single bit to I1";
-  let description = [{
-  }];
-
-  let arguments = (ins
-    AnySingleBitType:$input
-  );
-  let results = (outs I1:$result);
-  let assemblyFormat = [{
-    $input attr-dict `:` type($input)
-  }];
-}
-
-
-def ConcurrentAssertOp : MooreOp<"assert_property", [HasParent<"ProcedureOp">]>{
-  let summary = "concurrent assertion";
-  let description = [{
-  }];
-
-  let arguments = (ins
-    AnySingleBitType:$cond,
+    AnySingleBitType:$property,
     OptionalAttr<StrAttr>:$label
   );
   let assemblyFormat = [{
-    $cond (`label` $label^)? attr-dict `:` type($cond)
+    $property (`label` $label^)? attr-dict `:` type($property)
+  }];
+}
+
+def ConcurrentAssertOp : ConcurrentAssertLikeOp<"concurrrent_assert">{
+  let summary = "If cond is not true, an error should be thrown. Concurrent Assert.";
+}
+
+def ConcurrentAssumeOp : ConcurrentAssertLikeOp<"concurrrent_assume">{
+  let summary = "Verify the cond whether has the expected behavior. Concurrent Assume.";
+}
+
+def ConcurrentCoverOp : ConcurrentAssertLikeOp<"concurrrent_cover">{
+  let summary = "Monitor the coverage information. Concurrent Cover.";
+}
+
+//===----------------------------------------------------------------------===//
+// LTL Dialect Sequence and Property Intrinsics
+//===----------------------------------------------------------------------===//
+
+class LTLIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+    MooreOp<"int.ltl." # mnemonic, traits # [Pure]> {
+  let summary = "Moore variant of `ltl." # mnemonic # "`";
+  let description = "See `ltl." # mnemonic # "` op in the LTL dialect.";
+  let assemblyFormat = [{
+    operands attr-dict `:` functional-type(operands, results)
+  }];
+  let results = (outs AnySingleBitType:$result);
+}
+
+class UnaryLTLIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+    LTLIntrinsicOp<mnemonic, traits> {
+  let arguments = (ins AnySingleBitType:$input);
+}
+
+class BinaryLTLIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+    LTLIntrinsicOp<mnemonic, traits> {
+  let arguments = (ins AnySingleBitType:$lhs, AnySingleBitType:$rhs);
+}
+
+
+// Generic
+def LTLAndIntrinsicOp : BinaryLTLIntrinsicOp<"and", [Commutative]>;
+def LTLOrIntrinsicOp : BinaryLTLIntrinsicOp<"or", [Commutative]>;
+def LTLIntersectIntrinsicOp : BinaryLTLIntrinsicOp<"intersect", [Commutative]>;
+
+// Sequences
+def LTLDelayIntrinsicOp : LTLIntrinsicOp<"delay"> {
+  let arguments = (ins AnySingleBitType:$input,
+                       I64Attr:$delay,
+                       OptionalAttr<I64Attr>:$length);
+  let assemblyFormat = [{
+    $input `,` $delay (`,` $length^)? attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+def LTLConcatIntrinsicOp : BinaryLTLIntrinsicOp<"concat">;
+def LTLRepeatIntrinsicOp : LTLIntrinsicOp<"repeat"> {
+  let arguments = (ins AnySingleBitType:$input,
+                       I64Attr:$base,
+                       OptionalAttr<I64Attr>:$more);
+  let assemblyFormat = [{
+    $input `,` $base (`,` $more^)? attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+def LTLGoToRepeatIntrinsicOp : LTLIntrinsicOp<"goto_repeat"> {
+  let arguments = (ins AnySingleBitType:$input,
+                       I64Attr:$base,
+                       I64Attr:$more);
+  let assemblyFormat = [{
+    $input `,` $base `,` $more attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+def LTLNonConsecutiveRepeatIntrinsicOp : LTLIntrinsicOp<"non_consecutive_repeat"> {
+  let arguments = (ins AnySingleBitType:$input,
+                       I64Attr:$base,
+                       I64Attr:$more);
+  let assemblyFormat = [{
+    $input `,` $base `,` $more attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+// Properties
+def LTLNotIntrinsicOp : UnaryLTLIntrinsicOp<"not">;
+def LTLImplicationIntrinsicOp : BinaryLTLIntrinsicOp<"implication">;
+def LTLUntilIntrinsicOp : BinaryLTLIntrinsicOp<"until">;
+def LTLEventuallyIntrinsicOp : UnaryLTLIntrinsicOp<"eventually">;
+
+// Clocking
+def LTLClockIntrinsicOp : LTLIntrinsicOp<"clock"> {
+  let arguments = (ins AnySingleBitType:$input, EdgeAttr:$edge, AnySingleBitType:$clock);
+  let assemblyFormat = [{
+    $input `,` $edge $clock attr-dict `:` functional-type(operands, results)
   }];
 }
 

@@ -557,7 +557,8 @@ struct StmtVisitor {
   
   LogicalResult visit(const slang::ast::ConcurrentAssertionStatement &stmt) {
     emitError(loc) << "error ConcurrentAssertionStatement";
-    auto assertionExprVisitor = context.convertAssertionExpression(stmt.propertySpec);
+    auto property = context.convertAssertionExpression(stmt.propertySpec);
+    builder.create<moore::ConcurrentAssertOp>(loc, property, nullptr);
     return success();
   }
 

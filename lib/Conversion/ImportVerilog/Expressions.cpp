@@ -805,7 +805,7 @@ struct RvalueExprVisitor {
     //   loc = context.convertLocation(sequence->location);
     // }
   
-    context.convertAssertionExpression(expr.body);
+    auto value = context.convertAssertionExpression(expr.body);
     // for (auto sym : localVars) {
     //     auto dt = sym->getDeclaredType();
     //     ASSERT(dt);
@@ -814,33 +814,54 @@ struct RvalueExprVisitor {
     // }
 
     mlir::emitError(loc) << "AssertionInstanceExpression not implement";
-    return {};
+    return value;
   }
   
 
   Value visit(const slang::ast::SimpleAssertionExpr &assertionExpr) {
     auto value = context.convertRvalueExpression(assertionExpr.expr);
+    if(!value) {
+      mlir::emitError(loc) << "value disappear";
+      return {};
+    }
 
     mlir::emitError(loc) << "SimpleAssertionExpr not implement";
-    auto i1type = mlir::IntegerType::get(context.getContext(), 1);
-    auto i1Value = builder.create<moore::MooreToI1>(loc, i1type, value);
-    return i1Value;
+    return context.convertToBool(value);
   }
   
   Value visit(const slang::ast::SequenceConcatExpr &assertionExpr) {
     mlir::emitError(loc) << "SequenceConcatExpr not implement";
+    Value result = nullptr;
+    auto resultType = moore::IntType::get(context.getContext(), 1, Domain::TwoValued);
     for (auto& elem : assertionExpr.elements) {
       auto value = context.convertAssertionExpression(*elem.sequence);
+      if(elem.delay.min != 0 || !elem.delay.max.has_value() || elem.delay.max.value() != elem.delay.min) {
+        auto minCycle = builder.getI64IntegerAttr(elem.delay.min);
+        auto length = elem.delay.max.has_value() ? builder.getI64IntegerAttr(elem.delay.max.value() - elem.delay.min) : nullptr;
+        auto delayed = builder.create<moore::LTLDelayIntrinsicOp>(loc, resultType, value, minCycle, length);
+        value = delayed;
+      }
+      if(result) {
+        result = builder.create<moore::LTLConcatIntrinsicOp>(loc, resultType, result, value).getResult();
+      } else {
+        result = value;
+      }
     }
-    return {};
+
+    return result;
   }
 
   Value visit(const slang::ast::ClockingAssertionExpr &assertionExpr) {
     mlir::emitError(loc) << "ClockingAssertionExpr not implement";
     
-    // clocking.visit(visitor);
-    context.convertAssertionExpression(assertionExpr.expr);
-    return {};
+    auto &signalEvent = assertionExpr.clocking.as<slang::ast::SignalEventControl>();
+    auto property = context.convertAssertionExpression(assertionExpr.expr);
+    auto signal = context.convertRvalueExpression(signalEvent.expr);
+    auto clock = context.convertToBool(signal);
+    auto propertyType = cast<moore::IntType>(property.getType());
+    auto resultType = moore::IntType::get(context.getContext(), propertyType.getWidth(), propertyType.getDomain());
+
+    return builder.create<moore::LTLClockIntrinsicOp>(loc, resultType, context.convertToBool(property), Context::convertEdgeKind(signalEvent.edge), clock);
   }
 
   /// Emit an error for all other expressions.
