@@ -556,9 +556,26 @@ struct StmtVisitor {
   }
   
   LogicalResult visit(const slang::ast::ConcurrentAssertionStatement &stmt) {
-    emitError(loc) << "error ConcurrentAssertionStatement";
+    auto clockingStmt = stmt.propertySpec.as<slang::ast::ClockingAssertionExpr>();
+    auto& signalEvent = clockingStmt.clocking.as<slang::ast::SignalEventControl>();
+    
+    auto edge = context.convertEdgeKind(signalEvent.edge);
+    auto clock = context.convertRvalueExpression(signalEvent.expr);
     auto property = context.convertAssertionExpression(stmt.propertySpec);
-    builder.create<moore::ConcurrentAssertOp>(loc, property, nullptr);
+    switch(stmt.assertionKind) {
+    case slang::ast::AssertionKind::Assert:
+      builder.create<moore::AssertConcurrentOp>(loc, moore::EdgeAttr::get(context.getContext(), edge), clock, property);
+      break;
+    case slang::ast::AssertionKind::Assume:
+      builder.create<moore::AssumeConcurrentOp>(loc, moore::EdgeAttr::get(context.getContext(), edge), clock, property);
+      break;
+    case slang::ast::AssertionKind::CoverSequence:
+    case slang::ast::AssertionKind::CoverProperty:
+      builder.create<moore::CoverConcurrentOp>(loc, moore::EdgeAttr::get(context.getContext(), edge), clock, property);
+      break;
+    default:
+      break;
+    }
     return success();
   }
 

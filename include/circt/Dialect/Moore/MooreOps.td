@@ -20,8 +20,6 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
-include "circt/Dialect/LTL/LTLDialect.td"
-include "circt/Dialect/LTL/LTLTypes.td"
 
 // Base class for the operations in this dialect.
 class MooreOp<string mnemonic, list<Trait> traits = []> :
@@ -1419,27 +1417,124 @@ def CoverOp : ImmediateAssertOp<"cover">{
   let summary = "Monitor the coverage information.";
 }
 
-class ConcurrentAssertLikeOp<string mnemonic, list<Trait> traits = []> : 
-    MooreOp<mnemonic, traits # [HasParent<"ProcedureOp">]>{
+/// Concurrent verification operations defined by the SV standard.
+class ConcurrentVerifOp<string mnemonic, list<Trait> traits = []> :
+    MooreOp<mnemonic, traits> {
   let arguments = (ins
-    AnySingleBitType:$property,
-    OptionalAttr<StrAttr>:$label
-  );
+    EdgeAttr:$event, AnySingleBitType:$clock, AnySingleBitType:$property,
+    OptionalAttr<StrAttr>:$label,
+    OptionalAttr<StrAttr>:$message, Variadic<AnyType>:$substitutions);
+
   let assemblyFormat = [{
-    $property (`label` $label^)? attr-dict `:` type($property)
+    $event $clock `,` $property
+    (`label` $label^)?
+    (`message` $message^ (`(` $substitutions^ `)` `:`
+    qualified(type($substitutions)))?)? attr-dict
+    type($clock) `,` type($property)
+  }];
+
+  let builders = [
+    // no label, no message
+    OpBuilder<(ins
+      EdgeAttr.storageType:$event,
+      "mlir::Value":$clock,
+      "mlir::Value":$property),
+      [{ build(odsBuilder, odsState, event, clock, property, StringAttr{},
+        StringAttr{}, ValueRange{}); }]>,
+    // no message
+    OpBuilder<(ins
+      EdgeAttr.storageType:$event,
+      "mlir::Value":$clock,
+      "mlir::Value":$property,
+      StrAttr.storageType:$label),
+      [{ build(odsBuilder, odsState, event, clock, property, label,
+        StringAttr{}, ValueRange{}); }]>
+  ];
+
+  // let hasCanonicalizer = 1;
+}
+
+def AssertConcurrentOp : ConcurrentVerifOp<"assert.concurrent"> {
+  let summary = "concurrent assertion statement, i.e., assert property";
+  let description = [{
+    Specify that a property of the hardware design is true whenever the property
+    is evaluated.  This can be used to both document the behavior of the design
+    and to test that the design behaves as expected.  See section 16.5 of the
+    SystemVerilog 2017 specification.
   }];
 }
 
-def ConcurrentAssertOp : ConcurrentAssertLikeOp<"concurrrent_assert">{
-  let summary = "If cond is not true, an error should be thrown. Concurrent Assert.";
+def AssumeConcurrentOp : ConcurrentVerifOp<"assume.concurrent"> {
+  let summary = "concurrent assume statement, i.e., assume property";
+  let description = [{
+    Specify that a property is assumed to be true whenever the property is
+    evaluated.  This can be used to both document the behavior of the design and
+    to test that the design behaves as expected.  See section 16.5 of the
+    SystemVerilog 2017 specification.
+  }];
 }
 
-def ConcurrentAssumeOp : ConcurrentAssertLikeOp<"concurrrent_assume">{
-  let summary = "Verify the cond whether has the expected behavior. Concurrent Assume.";
+def CoverConcurrentOp : ConcurrentVerifOp<"cover.concurrent",
+                                          []> {
+  let summary = "concurrent cover statement, i.e., cover property";
+  let description = [{
+    Specify that a specific property should be monitored for coverage, i.e., a
+    simulation will watch if it occurrs and how many times it occurs.  See
+    section 16.5 of the SystemVerilog 2017 specification.
+  }];
 }
 
-def ConcurrentCoverOp : ConcurrentAssertLikeOp<"concurrrent_cover">{
-  let summary = "Monitor the coverage information. Concurrent Cover.";
+/// Property Assertions/Assumptions/Cover analogous to SVA property verification ops.
+class PropertyVerifOp<string mnemonic, list<Trait> traits = [AttrSizedOperandSegments]> :
+    MooreOp<mnemonic, traits> {
+  let arguments = (ins
+    AnySingleBitType:$property,
+    OptionalAttr<EdgeAttr>:$event, Optional<AnySingleBitType>:$clock, 
+    Optional<AnySingleBitType>:$disable,
+    OptionalAttr<StrAttr>:$label);
+
+  let assemblyFormat = [{
+    $property (`on` $event^)? ($clock^)? (`disable_iff` $disable^)?
+    (`label` $label^)? attr-dict `:` type($property)
+    type($clock) `,` type($disable)
+  }];
+
+  let builders = [
+    // no clock or event
+    OpBuilder<(ins "mlir::Value":$property,
+      "mlir::Value":$disable,
+       CArg<"StringAttr","StringAttr()">: $label),
+      [{ build(odsBuilder, odsState, property, EdgeAttr{}, Value(), disable, label); }]>
+  ];
+
+  // let hasVerifier = true;
+}
+
+def AssertPropertyOp : PropertyVerifOp<"assert_property"> {
+  let summary = "property assertion -- can be disabled and clocked";
+  let description = [{
+    Assert that a given SVA-style property holds. This is only checked when 
+    the disable signal is low and a clock event occurs. This is analogous to 
+    the verif.assert operation, but with a flipped enable polarity.
+  }];
+}
+
+def AssumePropertyOp : PropertyVerifOp<"assume_property"> {
+  let summary = "property assumption -- can be disabled and clocked";
+  let description = [{
+    Assume that a given SVA-style property holds. This is only considered when 
+    the disable signal is low and a clock event occurs. This is analogous to 
+    the verif.assume operation, but with a flipped enable polarity.
+  }];
+}
+
+def CoverPropertyOp : PropertyVerifOp<"cover_property"> {
+  let summary = "property cover point -- can be disabled and clocked";
+  let description = [{
+    Cover when a given SVA-style property holds. This is only checked when 
+    the disable signal is low and a clock event occurs. This is analogous to 
+    the verif.cover operation, but with a flipped enable polarity.
+  }];
 }
 
 //===----------------------------------------------------------------------===//
