@@ -787,6 +787,219 @@ struct RvalueExprVisitor {
     return visitAssignmentPattern(expr, *count);
   }
 
+  Value visit(const slang::ast::AssertionInstanceExpression &expr) {
+    mlir::emitError(loc) << "AssertionInstanceExpression not implement"
+                         << expr.localVars.size() << expr.arguments.size()
+                         << expr.isRecursiveProperty
+                         << slang::ast::toString(expr.symbol.kind);
+
+    Type resultType;
+    switch (expr.symbol.kind) {
+    case slang::ast::SymbolKind::Property:
+      resultType = moore::PropertyType::get(context.getContext());
+      break;
+    case slang::ast::SymbolKind::Sequence:
+      resultType = moore::SequenceType::get(context.getContext());
+      break;
+    default:
+      mlir::emitError(loc) << "unsupported assertion instance kind";
+      return {};
+    }
+
+    auto instanceOp = builder.create<moore::AssertionInstanceOp>(
+        loc, resultType,
+        mlir::StringAttr::get(context.getContext(), expr.symbol.name));
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(&instanceOp.getBody().emplaceBlock());
+
+    Context::ValueSymbolScope scope(context.valueSymbols);
+    for (const auto *var : expr.localVars) {
+      if (!var->isValue()) {
+        mlir::emitError(loc) << "not a value symbol";
+        return {};
+      }
+      auto &valueSym = (*var).as<slang::ast::ValueSymbol>();
+      auto type = context.convertType(*valueSym.getDeclaredType());
+      if (!type)
+        return {};
+
+      Value initial;
+      if (const auto *init = valueSym.getInitializer()) {
+        initial = context.convertRvalueExpression(*init);
+        if (!initial)
+          return {};
+      }
+
+      // Collect local temporary variables.
+      auto varOp = builder.create<moore::VariableOp>(
+          loc, moore::RefType::get(cast<moore::UnpackedType>(type)),
+          builder.getStringAttr(valueSym.name), initial);
+      context.valueSymbols.insertIntoScope(context.valueSymbols.getCurScope(),
+                                           &valueSym, varOp);
+    }
+
+    auto value = context.convertAssertionExpression(expr.body);
+    builder.create<moore::LemmaOp>(loc, value);
+
+    return instanceOp.getResult();
+  }
+
+  Value visit(const slang::ast::SimpleAssertionExpr &assertionExpr) {
+    auto value = context.convertRvalueExpression(assertionExpr.expr);
+    if (!value) {
+      mlir::emitError(loc) << "value disappear";
+      return {};
+    }
+
+    return value;
+  }
+
+  Value visit(const slang::ast::SequenceConcatExpr &assertionExpr) {
+    Value result = nullptr;
+    for (auto &elem : assertionExpr.elements) {
+      Value value = context.convertAssertionExpression(*elem.sequence);
+      if (elem.delay.min != 0 || !elem.delay.max.has_value() ||
+          elem.delay.max.value() != elem.delay.min) {
+        auto minCycle = builder.getI64IntegerAttr(elem.delay.min);
+        auto length = elem.delay.max.has_value()
+                          ? builder.getI64IntegerAttr(elem.delay.max.value() -
+                                                      elem.delay.min)
+                          : nullptr;
+        auto delayed = builder.create<moore::LTLDelayIntrinsicOp>(
+            loc, moore::SequenceType::get(context.getContext()), value,
+            minCycle, length);
+        value = delayed.getResult();
+      }
+      if (result) {
+        result = builder
+                     .create<moore::LTLConcatIntrinsicOp>(
+                         loc, moore::SequenceType::get(context.getContext()),
+                         result, value)
+                     .getResult();
+      } else {
+        result = value;
+      }
+    }
+
+    return result;
+  }
+
+  Value visit(const slang::ast::ClockingAssertionExpr &assertionExpr) {
+    auto &signalEvent =
+        assertionExpr.clocking.as<slang::ast::SignalEventControl>();
+    auto property = context.convertAssertionExpression(assertionExpr.expr);
+    auto signal = context.convertRvalueExpression(signalEvent.expr);
+    auto clock = context.convertToBool(signal);
+
+    Type resultType = moore::PropertyType::get(context.getContext());
+    if (isa<moore::SequenceType>(property.getType())) {
+      resultType = moore::SequenceType::get(context.getContext());
+    }
+
+    return builder.create<moore::LTLClockIntrinsicOp>(
+        loc, property.getType(), property,
+        Context::convertEdgeKind(signalEvent.edge), clock);
+  }
+
+  Value visit(const slang::ast::DisableIffAssertionExpr &assertionExpr) {
+    auto disable = context.convertRvalueExpression(assertionExpr.condition);
+    auto expr = context.convertAssertionExpression(assertionExpr.expr);
+
+    return builder.create<moore::LTLDisableIntrinsicOp>(
+        loc, moore::PropertyType::get(context.getContext()), expr, disable);
+  }
+
+  Value visit(const slang::ast::BinaryAssertionExpr &assertionExpr) {
+
+    auto lhs = context.convertAssertionExpression(assertionExpr.left);
+    if (!lhs)
+      return {};
+    auto rhs = context.convertAssertionExpression(assertionExpr.right);
+    if (!rhs)
+      return {};
+
+    Type resultType = moore::PropertyType::get(context.getContext());
+
+    if (isa<moore::IntType>(lhs.getType()) ||
+        isa<moore::IntType>(rhs.getType())) {
+      if ((cast<moore::IntType>(lhs.getType()).getDomain() ==
+           moore::Domain::FourValued) ||
+          (cast<moore::IntType>(rhs.getType()).getDomain() ==
+           moore::Domain::FourValued)) {
+        resultType = moore::IntType::get(context.getContext(), 1,
+                                         moore::Domain::FourValued);
+      }
+      resultType = moore::IntType::get(context.getContext(), 1,
+                                       moore::Domain::TwoValued);
+    }
+
+    using slang::ast::BinaryAssertionOperator;
+    switch (assertionExpr.op) {
+
+    case BinaryAssertionOperator::And:
+      return builder.create<moore::LTLAndIntrinsicOp>(loc, resultType, lhs,
+                                                      rhs);
+    case BinaryAssertionOperator::Or:
+      return builder.create<moore::LTLOrIntrinsicOp>(loc, resultType, lhs, rhs);
+    case BinaryAssertionOperator::Intersect:
+      return builder.create<moore::LTLIntersectIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
+    case BinaryAssertionOperator::Throughout:
+      return {};
+    case BinaryAssertionOperator::Within:
+      return {};
+    case BinaryAssertionOperator::Iff:
+      return {};
+    case BinaryAssertionOperator::Until:
+      return builder.create<moore::LTLUntilIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
+    case BinaryAssertionOperator::SUntil:
+      return {};
+    case BinaryAssertionOperator::UntilWith:
+      return {};
+    case BinaryAssertionOperator::SUntilWith:
+      return {};
+    case BinaryAssertionOperator::Implies:
+      return {};
+    case BinaryAssertionOperator::OverlappedImplication:
+      return builder.create<moore::LTLImplicationIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
+    case BinaryAssertionOperator::NonOverlappedImplication: {
+      resultType = moore::PropertyType::get(context.getContext());
+      if (isa<moore::SequenceType>(rhs.getType())) {
+        resultType = moore::SequenceType::get(context.getContext());
+      }
+      auto delayed = builder.create<moore::LTLDelayIntrinsicOp>(
+          loc, resultType, lhs, builder.getI64IntegerAttr(1),
+          builder.getI64IntegerAttr(0));
+      return builder.create<moore::LTLImplicationIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), rhs, delayed);
+    }
+    case BinaryAssertionOperator::OverlappedFollowedBy:
+      return {};
+    case BinaryAssertionOperator::NonOverlappedFollowedBy:
+      return {};
+    }
+
+    return {};
+  }
+
+  Value visit(const slang::ast::UnaryAssertionExpr &assertionExpr) {
+    auto operand = context.convertAssertionExpression(assertionExpr.expr);
+    switch (assertionExpr.op) {
+    case slang::ast::UnaryAssertionOperator::Not:
+      return builder.create<moore::LTLNotIntrinsicOp>(loc, operand.getType(),
+                                                      operand);
+    case slang::ast::UnaryAssertionOperator::Eventually:
+      return builder.create<moore::LTLEventuallyIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), operand);
+    default:
+      mlir::emitError(loc) << "unsupported unary assertion operator"
+                           << slang::ast::toString(assertionExpr.op);
+      return {};
+    }
+  }
+
   /// Emit an error for all other expressions.
   template <typename T>
   Value visit(T &&node) {
@@ -797,6 +1010,10 @@ struct RvalueExprVisitor {
 
   Value visitInvalid(const slang::ast::Expression &expr) {
     mlir::emitError(loc, "invalid expression");
+    return {};
+  }
+  Value visitInvalid(const slang::ast::AssertionExpr &expr) {
+    mlir::emitError(loc, "invalid assertion expression");
     return {};
   }
 };
@@ -1100,4 +1317,12 @@ Value Context::materializeConversion(Type type, Value value, bool isSigned,
   if (value.getType() != type)
     value = builder.create<moore::ConversionOp>(loc, type, value);
   return value;
+}
+
+Value Context::convertAssertionExpression(
+    const slang::ast::AssertionExpr &expr) {
+  auto loc = convertLocation(expr.syntax->sourceRange());
+
+  auto visitor = RvalueExprVisitor(*this, loc);
+  return expr.visit(visitor);
 }

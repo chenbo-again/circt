@@ -42,6 +42,8 @@ class UnpackedArrayType;
 class UnpackedStructType;
 class UnpackedUnionType;
 class VoidType;
+class PropertyType;
+class SequenceType;
 
 /// The number of values each bit of a type can assume.
 enum class Domain {
@@ -84,7 +86,8 @@ public:
   static bool classof(Type type) {
     return llvm::isa<PackedType, StringType, ChandleType, EventType, RealType,
                      UnpackedArrayType, OpenUnpackedArrayType, AssocArrayType,
-                     QueueType, UnpackedStructType, UnpackedUnionType>(type);
+                     QueueType, UnpackedStructType, UnpackedUnionType,
+                     PropertyType, SequenceType>(type);
   }
 
   /// Get the value domain of this type.

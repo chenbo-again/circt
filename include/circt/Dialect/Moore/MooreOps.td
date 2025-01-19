@@ -185,6 +185,40 @@ def ProcedureOp : MooreOp<"procedure", [
   }];
 }
 
+def AssertionInstanceOp : MooreOp<"assertion_instance", [
+  RecursiveMemoryEffects,
+  RecursivelySpeculatable
+]> {
+  let summary = "";
+  let description = [{
+  }];
+
+  let arguments = (ins
+    StrAttr:$propertyName);
+  let results = (outs LTLAnyPropertyType:$output);
+  let regions = (region AnyRegion:$body);
+
+  let assemblyFormat = [{
+    $propertyName attr-dict-with-keyword $body `:` type($output)
+  }];
+}
+
+def LemmaOp : MooreOp<"lemma", [
+  Pure,
+  Terminator,
+  HasParent<"AssertionInstanceOp">
+]> {
+  let summary = "assertion instance yield and termination operation";
+  let description = [{
+  }];
+  let arguments = (ins LTLAnyPropertyType:$result);
+  let assemblyFormat = [{
+    attr-dict $result `:` type($result)
+  }];
+}
+
+
+
 def ReturnOp : MooreOp<"return", [
   Pure, Terminator, HasParent<"ProcedureOp">
 ]> {
@@ -1416,6 +1450,152 @@ def AssumeOp : ImmediateAssertOp<"assume">{
 def CoverOp : ImmediateAssertOp<"cover">{
   let summary = "Monitor the coverage information.";
 }
+
+/// Concurrent verification operations defined by the SV standard.
+class ConcurrentVerifOp<string mnemonic, list<Trait> traits = []> :
+    MooreOp<mnemonic, traits> {
+  let arguments = (ins
+    LTLAnyPropertyType:$property,
+    OptionalAttr<StrAttr>:$label,
+    OptionalAttr<StrAttr>:$message, Variadic<AnyType>:$substitutions);
+
+  let assemblyFormat = [{
+    $property
+    (`label` $label^)?
+    (`message` $message^ (`(` $substitutions^ `)` `:`
+    qualified(type($substitutions)))?)? attr-dict
+    type($property)
+  }];
+
+  let builders = [
+    // no label, no message
+    OpBuilder<(ins
+      "mlir::Value":$property),
+      [{ build(odsBuilder, odsState, property, StringAttr{},
+        StringAttr{}, ValueRange{}); }]>,
+    // no message
+    OpBuilder<(ins
+      "mlir::Value":$property,
+      StrAttr.storageType:$label),
+      [{ build(odsBuilder, odsState, property, label,
+        StringAttr{}, ValueRange{}); }]>
+  ];
+
+  // let hasCanonicalizer = 1;
+}
+
+def AssertConcurrentOp : ConcurrentVerifOp<"assert.concurrent"> {
+  let summary = "concurrent assertion statement, i.e., assert property";
+  let description = [{
+    Specify that a property of the hardware design is true whenever the property
+    is evaluated.  This can be used to both document the behavior of the design
+    and to test that the design behaves as expected.  See section 16.5 of the
+    SystemVerilog 2017 specification.
+  }];
+}
+
+def AssumeConcurrentOp : ConcurrentVerifOp<"assume.concurrent"> {
+  let summary = "concurrent assume statement, i.e., assume property";
+  let description = [{
+    Specify that a property is assumed to be true whenever the property is
+    evaluated.  This can be used to both document the behavior of the design and
+    to test that the design behaves as expected.  See section 16.5 of the
+    SystemVerilog 2017 specification.
+  }];
+}
+
+def CoverConcurrentOp : ConcurrentVerifOp<"cover.concurrent",
+                                          []> {
+  let summary = "concurrent cover statement, i.e., cover property";
+  let description = [{
+    Specify that a specific property should be monitored for coverage, i.e., a
+    simulation will watch if it occurrs and how many times it occurs.  See
+    section 16.5 of the SystemVerilog 2017 specification.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// LTL Dialect Sequence and Property Intrinsics
+//===----------------------------------------------------------------------===//
+
+class LTLIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+    MooreOp<"int.ltl." # mnemonic, traits # [Pure]> {
+  let summary = "Moore variant of `ltl." # mnemonic # "`";
+  let description = "See `ltl." # mnemonic # "` op in the LTL dialect.";
+  let assemblyFormat = [{
+    operands attr-dict `:` functional-type(operands, results)
+  }];
+  let results = (outs LTLAnyPropertyType:$result);
+}
+
+class UnaryLTLIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+    LTLIntrinsicOp<mnemonic, traits> {
+  let arguments = (ins LTLAnyPropertyType:$input);
+}
+
+class BinaryLTLIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+    LTLIntrinsicOp<mnemonic, traits> {
+  let arguments = (ins LTLAnyPropertyType:$lhs, LTLAnyPropertyType:$rhs);
+}
+
+
+// Generic
+def LTLAndIntrinsicOp : BinaryLTLIntrinsicOp<"and", [Commutative]>;
+def LTLOrIntrinsicOp : BinaryLTLIntrinsicOp<"or", [Commutative]>;
+def LTLIntersectIntrinsicOp : BinaryLTLIntrinsicOp<"intersect", [Commutative]>;
+
+// Sequences
+def LTLDelayIntrinsicOp : LTLIntrinsicOp<"delay"> {
+  let arguments = (ins LTLAnySequenceType:$input,
+                       I64Attr:$delay,
+                       OptionalAttr<I64Attr>:$length);
+  let assemblyFormat = [{
+    $input `,` $delay (`,` $length^)? attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+def LTLConcatIntrinsicOp : LTLIntrinsicOp<"concat"> {
+  let arguments = (ins LTLAnySequenceType:$lhs, LTLAnySequenceType:$rhs);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+def LTLRepeatIntrinsicOp : LTLIntrinsicOp<"repeat"> {
+  let arguments = (ins LTLAnySequenceType:$input,
+                       I64Attr:$base,
+                       OptionalAttr<I64Attr>:$more);
+  let assemblyFormat = [{
+    $input `,` $base (`,` $more^)? attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+// Properties
+def LTLNotIntrinsicOp : UnaryLTLIntrinsicOp<"not">;
+def LTLImplicationIntrinsicOp : BinaryLTLIntrinsicOp<"implication">;
+def LTLUntilIntrinsicOp : BinaryLTLIntrinsicOp<"until">;
+def LTLEventuallyIntrinsicOp : UnaryLTLIntrinsicOp<"eventually">;
+
+// Clocking
+def LTLClockIntrinsicOp : LTLIntrinsicOp<"clock"> {
+  let arguments = (ins LTLAnyPropertyType:$input, EdgeAttr:$edge, AnySingleBitType:$clock);
+  let assemblyFormat = [{
+    $input `,` $edge $clock attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+// Disable
+def LTLDisableIntrinsicOp : LTLIntrinsicOp<"disable"> {
+  let arguments = (ins LTLAnyPropertyType:$input, AnySingleBitType:$disable);
+  let assemblyFormat = [{
+    $input `,` $disable attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 
 //===----------------------------------------------------------------------===//
 // Format Strings

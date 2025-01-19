@@ -543,6 +543,14 @@ struct ModuleVisitor : public BaseVisitor {
     return context.convertFunction(subroutine);
   }
 
+  LogicalResult visit(const slang::ast::SequenceSymbol &sequence) {
+    return success();
+  }
+
+  LogicalResult visit(const slang::ast::PropertySymbol &property) {
+    return success();
+  }
+
   /// Emit an error for all other members.
   template <typename T>
   LogicalResult visit(T &&node) {

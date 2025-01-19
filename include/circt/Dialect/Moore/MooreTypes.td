@@ -389,6 +389,34 @@ def FormatStringType : MooreTypeDef<"FormatString"> {
   }];
 }
 
+def LTLSequenceType : MooreTypeDef<"Sequence", [], "moore::UnpackedType"> {
+  let mnemonic = "sequence";
+  let summary = "LTL sequence type";
+  let description = [{
+    The `ltl.sequence` type represents a sequence of linear temporal logic, for
+    example, *"A is true two cycles after B is true"*.
+
+    Note that this type explicitly identifies a *sequence*. However, a boolean
+    value (`i1`) is also a valid sequence. Operations that accept a sequence as
+    an operand will use the `AnySequence` constraint, which also accepts `i1`.
+  }];
+}
+
+def LTLPropertyType : MooreTypeDef<"Property", [], "moore::UnpackedType"> {
+  let mnemonic = "property";
+  let summary = "LTL property type";
+  let description = [{
+    The `ltl.property` type represents a verifiable property built from linear
+    temporal logic sequences and quantifiers, for example, *"if you see sequence
+    A, eventually you will see sequence B"*.
+
+    Note that this type explicitly identifies a *property*. However, a boolean
+    value (`i1`) or a sequence (`ltl.sequence`) is also a valid property.
+    Operations that accept a property as an operand will use the `AnyProperty`
+    constraint, which also accepts `ltl.sequence` and `i1`.
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Constraints
 //===----------------------------------------------------------------------===//
@@ -420,6 +448,19 @@ def BitType : MooreType<CPred<[{
     IntType::getInt($_builder.getContext(), 1)
   }];
 }
+
+def LTLAnySequenceType : MooreType<Or<[AnySingleBitType.predicate,
+                                       LTLSequenceType.predicate]>,
+  "any sequence type", "moore::UnpackedType">;
+
+def LTLAnyPropertyType : MooreType<Or<[AnySingleBitType.predicate,
+                                       LTLSequenceType.predicate,
+                                       LTLPropertyType.predicate]>,
+  "any property type", "moore::UnpackedType">;
+
+def LTLSequenceOrPropertyType : MooreType<Or<[LTLSequenceType.predicate,
+                                             LTLPropertyType.predicate]>,
+  "sequence or property type", "moore::UnpackedType">;
 
 /// A packed or unpacked array type with a fixed size.
 def AnyStaticArrayType : MooreType<

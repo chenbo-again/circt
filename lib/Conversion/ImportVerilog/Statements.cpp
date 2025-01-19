@@ -547,6 +547,25 @@ struct StmtVisitor {
     return success();
   }
 
+  LogicalResult visit(const slang::ast::ConcurrentAssertionStatement &stmt) {
+    auto property = context.convertAssertionExpression(stmt.propertySpec);
+    switch (stmt.assertionKind) {
+    case slang::ast::AssertionKind::Assert:
+      builder.create<moore::AssertConcurrentOp>(loc, property);
+      break;
+    case slang::ast::AssertionKind::Assume:
+      builder.create<moore::AssumeConcurrentOp>(loc, property);
+      break;
+    case slang::ast::AssertionKind::CoverSequence:
+    case slang::ast::AssertionKind::CoverProperty:
+      builder.create<moore::CoverConcurrentOp>(loc, property);
+      break;
+    default:
+      break;
+    }
+    return success();
+  }
+
   /// Handle the subset of system calls that return no result value. Return
   /// true if the called system task could be handled, false otherwise. Return
   /// failure if an error occurred.
