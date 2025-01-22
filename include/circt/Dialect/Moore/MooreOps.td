@@ -1574,6 +1574,35 @@ def LTLRepeatIntrinsicOp : LTLIntrinsicOp<"repeat"> {
   }];
 }
 
+def LTLGoToRepeatIntrinsicOp : LTLIntrinsicOp<"goto_repeat"> {
+  let arguments = (ins LTLAnySequenceType:$input,
+                       I64Attr:$base,
+                       I64Attr:$more);
+  let assemblyFormat = [{
+    $input `,` $base `,` $more attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+def LTLNonConsecutiveRepeatIntrinsicOp : LTLIntrinsicOp<"non_consecutive_repeat"> {
+  let arguments = (ins LTLAnySequenceType:$input,
+                       I64Attr:$base,
+                       I64Attr:$more);
+  let assemblyFormat = [{
+    $input `,` $base `,` $more attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+def LTLPastIntrinsicOp : LTLIntrinsicOp<"past"> {
+  let arguments = (ins AnySingleBitType:$input, I64Attr:$delay);
+  let results = (outs AnySingleBitType:$result);
+  let assemblyFormat = [{
+    $input `,` $delay attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
 // Properties
 def LTLNotIntrinsicOp : UnaryLTLIntrinsicOp<"not">;
 def LTLImplicationIntrinsicOp : BinaryLTLIntrinsicOp<"implication">;

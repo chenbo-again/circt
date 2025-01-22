@@ -788,11 +788,6 @@ struct RvalueExprVisitor {
   }
 
   Value visit(const slang::ast::AssertionInstanceExpression &expr) {
-    mlir::emitError(loc) << "AssertionInstanceExpression not implement"
-                         << expr.localVars.size() << expr.arguments.size()
-                         << expr.isRecursiveProperty
-                         << slang::ast::toString(expr.symbol.kind);
-
     Type resultType;
     switch (expr.symbol.kind) {
     case slang::ast::SymbolKind::Property:
@@ -846,9 +841,33 @@ struct RvalueExprVisitor {
 
   Value visit(const slang::ast::SimpleAssertionExpr &assertionExpr) {
     auto value = context.convertRvalueExpression(assertionExpr.expr);
-    if (!value) {
-      mlir::emitError(loc) << "value disappear";
-      return {};
+    if (assertionExpr.repetition.has_value()) {
+      IntegerAttr baseAttr =
+          builder.getI64IntegerAttr(assertionExpr.repetition->range.min);
+      IntegerAttr moreAttr = nullptr;
+      if (assertionExpr.repetition->range.max.has_value()) {
+        uint32_t more = assertionExpr.repetition->range.max.value() -
+                        assertionExpr.repetition->range.min;
+        moreAttr = builder.getI64IntegerAttr(more);
+      }
+
+      switch (assertionExpr.repetition->kind) {
+      case slang::ast::SequenceRepetition::Consecutive:
+        value = builder.create<moore::LTLRepeatIntrinsicOp>(
+            loc, moore::SequenceType::get(context.getContext()), value,
+            baseAttr, moreAttr);
+        break;
+      case slang::ast::SequenceRepetition::Nonconsecutive:
+        value = builder.create<moore::LTLNonConsecutiveRepeatIntrinsicOp>(
+            loc, moore::SequenceType::get(context.getContext()), value,
+            baseAttr, moreAttr);
+        break;
+      case slang::ast::SequenceRepetition::GoTo:
+        value = builder.create<moore::LTLGoToRepeatIntrinsicOp>(
+            loc, moore::SequenceType::get(context.getContext()), value,
+            baseAttr, moreAttr);
+        break;
+      }
     }
 
     return value;
@@ -920,17 +939,22 @@ struct RvalueExprVisitor {
 
     Type resultType = moore::PropertyType::get(context.getContext());
 
-    if (isa<moore::IntType>(lhs.getType()) ||
-        isa<moore::IntType>(rhs.getType())) {
-      if ((cast<moore::IntType>(lhs.getType()).getDomain() ==
+    Type lhsType = lhs.getType();
+    Type rhsType = rhs.getType();
+
+    if (isa<moore::IntType>(lhsType) && isa<moore::IntType>(rhsType)) {
+      if ((cast<moore::IntType>(lhsType).getDomain() ==
            moore::Domain::FourValued) ||
-          (cast<moore::IntType>(rhs.getType()).getDomain() ==
+          (cast<moore::IntType>(rhsType).getDomain() ==
            moore::Domain::FourValued)) {
         resultType = moore::IntType::get(context.getContext(), 1,
                                          moore::Domain::FourValued);
       }
       resultType = moore::IntType::get(context.getContext(), 1,
                                        moore::Domain::TwoValued);
+    } else if (isa<moore::SequenceType>(lhsType) &&
+               isa<moore::SequenceType>(rhsType)) {
+      resultType = moore::SequenceType::get(context.getContext());
     }
 
     using slang::ast::BinaryAssertionOperator;
@@ -944,8 +968,12 @@ struct RvalueExprVisitor {
     case BinaryAssertionOperator::Intersect:
       return builder.create<moore::LTLIntersectIntrinsicOp>(
           loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
-    case BinaryAssertionOperator::Throughout:
-      return {};
+    case BinaryAssertionOperator::Throughout: {
+      auto repeatOp = builder.create<moore::LTLRepeatIntrinsicOp>(loc, moore::SequenceType::get(context.getContext()), lhs,
+                                                                  builder.getI64IntegerAttr(0), nullptr);
+      return builder.create<moore::LTLIntersectIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), repeatOp, rhs);
+    }
     case BinaryAssertionOperator::Within:
       return {};
     case BinaryAssertionOperator::Iff:
@@ -966,14 +994,11 @@ struct RvalueExprVisitor {
           loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
     case BinaryAssertionOperator::NonOverlappedImplication: {
       resultType = moore::PropertyType::get(context.getContext());
-      if (isa<moore::SequenceType>(rhs.getType())) {
-        resultType = moore::SequenceType::get(context.getContext());
-      }
       auto delayed = builder.create<moore::LTLDelayIntrinsicOp>(
-          loc, resultType, lhs, builder.getI64IntegerAttr(1),
+          loc, resultType, rhs, builder.getI64IntegerAttr(1),
           builder.getI64IntegerAttr(0));
-      return builder.create<moore::LTLImplicationIntrinsicOp>(
-          loc, moore::PropertyType::get(context.getContext()), rhs, delayed);
+      return builder.create<moore::LTLImplicationIntrinsicOp>(loc, resultType,
+                                                              lhs, delayed);
     }
     case BinaryAssertionOperator::OverlappedFollowedBy:
       return {};
