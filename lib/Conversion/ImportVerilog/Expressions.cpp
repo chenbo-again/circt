@@ -800,6 +800,10 @@ struct RvalueExprVisitor {
       mlir::emitError(loc) << "unsupported assertion instance kind";
       return {};
     }
+    // if there is no local variable, treat it as a normal assertion expression.
+    if (expr.localVars.empty()) {
+      return context.convertAssertionExpression(expr.body);
+    }
 
     auto instanceOp = builder.create<moore::AssertionInstanceOp>(
         loc, resultType,
@@ -937,73 +941,134 @@ struct RvalueExprVisitor {
     if (!rhs)
       return {};
 
-    Type resultType = moore::PropertyType::get(context.getContext());
-
     Type lhsType = lhs.getType();
     Type rhsType = rhs.getType();
-
+    Type andOrResultType = moore::PropertyType::get(context.getContext());
     if (isa<moore::IntType>(lhsType) && isa<moore::IntType>(rhsType)) {
-      if ((cast<moore::IntType>(lhsType).getDomain() ==
-           moore::Domain::FourValued) ||
-          (cast<moore::IntType>(rhsType).getDomain() ==
-           moore::Domain::FourValued)) {
-        resultType = moore::IntType::get(context.getContext(), 1,
-                                         moore::Domain::FourValued);
-      }
-      resultType = moore::IntType::get(context.getContext(), 1,
-                                       moore::Domain::TwoValued);
+      andOrResultType = moore::IntType::get(context.getContext(), 1,
+                                            moore::Domain::TwoValued);
     } else if (isa<moore::SequenceType>(lhsType) &&
                isa<moore::SequenceType>(rhsType)) {
-      resultType = moore::SequenceType::get(context.getContext());
+      andOrResultType = moore::SequenceType::get(context.getContext());
     }
 
     using slang::ast::BinaryAssertionOperator;
     switch (assertionExpr.op) {
-
     case BinaryAssertionOperator::And:
-      return builder.create<moore::LTLAndIntrinsicOp>(loc, resultType, lhs,
+      return builder.create<moore::LTLAndIntrinsicOp>(loc, andOrResultType, lhs,
                                                       rhs);
     case BinaryAssertionOperator::Or:
-      return builder.create<moore::LTLOrIntrinsicOp>(loc, resultType, lhs, rhs);
+      return builder.create<moore::LTLOrIntrinsicOp>(loc, andOrResultType, lhs,
+                                                     rhs);
+
     case BinaryAssertionOperator::Intersect:
       return builder.create<moore::LTLIntersectIntrinsicOp>(
           loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
     case BinaryAssertionOperator::Throughout: {
-      auto repeatOp = builder.create<moore::LTLRepeatIntrinsicOp>(loc, moore::SequenceType::get(context.getContext()), lhs,
-                                                                  builder.getI64IntegerAttr(0), nullptr);
+      // The construct lhs throughout rhs is an abbreviation for the following:
+      // (lhs) [*0:$] intersect rhs
+      // See IEEE 1800-2017 § 16.9.9 "Conditions over sequences".
+      auto repeatOp = builder.create<moore::LTLRepeatIntrinsicOp>(
+          loc, moore::SequenceType::get(context.getContext()), lhs,
+          builder.getI64IntegerAttr(0), nullptr);
+
       return builder.create<moore::LTLIntersectIntrinsicOp>(
-          loc, moore::PropertyType::get(context.getContext()), repeatOp, rhs);
+          loc, moore::SequenceType::get(context.getContext()), repeatOp, rhs);
     }
-    case BinaryAssertionOperator::Within:
-      return {};
-    case BinaryAssertionOperator::Iff:
-      return {};
+    case BinaryAssertionOperator::Within: {
+      // The construct lhs within rhs is an abbreviation for the following:
+      // (1[*0:$] ##1 lhs ##1 1[*0:$]) intersect rhs
+      auto bitType = moore::IntType::get(context.getContext(), 1,
+                                         moore::Domain::TwoValued);
+      auto constOne =
+          builder.create<moore::ConstantOp>(loc, bitType, APInt(1, 1, false));
+      auto successor = builder.create<moore::LTLRepeatIntrinsicOp>(
+          loc, moore::SequenceType::get(context.getContext()), constOne,
+          builder.getI64IntegerAttr(0), nullptr);
+      auto lhsExpand = builder.create<moore::LTLConcatIntrinsicOp>(
+          loc, moore::SequenceType::get(context.getContext()), successor,
+          builder.create<moore::LTLConcatIntrinsicOp>(
+              loc, moore::SequenceType::get(context.getContext()), lhs,
+              successor));
+      return builder.create<moore::LTLIntersectIntrinsicOp>(
+          loc, moore::SequenceType::get(context.getContext()), lhsExpand, rhs);
+    }
+    case BinaryAssertionOperator::Iff: {
+      // A property is an iff if it has the following form:
+      // property_expr1 iff property_expr2
+      // A property of this form evaluates to true if, and only if, either both
+      // property_expr1 evaluates to false and property_expr2 evaluates to false
+      // or both property_expr1 evaluates to true and property_expr2 evaluates
+      // to true. See IEEE 1800-2017 § 16.12.8 "Implies and iff properties".
+      auto allTrue = builder.create<moore::LTLAndIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
+      auto notLhs = builder.create<moore::LTLNotIntrinsicOp>(loc, lhsType, lhs);
+      auto notRhs = builder.create<moore::LTLNotIntrinsicOp>(loc, rhsType, rhs);
+      auto allFalse = builder.create<moore::LTLAndIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), notLhs, notRhs);
+      return builder.create<moore::LTLOrIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), allTrue,
+          allFalse);
+    }
+    // do not distingush SUntil and Until
     case BinaryAssertionOperator::Until:
+    case BinaryAssertionOperator::SUntil:
       return builder.create<moore::LTLUntilIntrinsicOp>(
           loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
-    case BinaryAssertionOperator::SUntil:
-      return {};
+    // do not distingush UntilWith and SUntilWith
     case BinaryAssertionOperator::UntilWith:
-      return {};
-    case BinaryAssertionOperator::SUntilWith:
-      return {};
-    case BinaryAssertionOperator::Implies:
-      return {};
+    case BinaryAssertionOperator::SUntilWith: {
+      auto lhsUntilRhs = builder.create<moore::LTLUntilIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
+      auto lhsAndRhs = builder.create<moore::LTLAndIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
+      return builder.create<moore::LTLImplicationIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhsUntilRhs,
+          lhsAndRhs);
+    }
+    case BinaryAssertionOperator::Implies: {
+      // A property is an implies if it has the following form:
+      // property_expr1 implies property_expr2
+      // A property of this form evaluates to true if, and only if, either
+      // property_expr1 evaluates to false or property_expr2 evaluates to true.
+      // See IEEE 1800-2017 § 16.12.8 "Implies and iff properties".
+      auto notLHS = builder.create<moore::LTLNotIntrinsicOp>(loc, lhsType, lhs);
+      return builder.create<moore::LTLOrIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), notLHS, rhs);
+    }
     case BinaryAssertionOperator::OverlappedImplication:
       return builder.create<moore::LTLImplicationIntrinsicOp>(
           loc, moore::PropertyType::get(context.getContext()), lhs, rhs);
     case BinaryAssertionOperator::NonOverlappedImplication: {
-      resultType = moore::PropertyType::get(context.getContext());
       auto delayed = builder.create<moore::LTLDelayIntrinsicOp>(
-          loc, resultType, rhs, builder.getI64IntegerAttr(1),
-          builder.getI64IntegerAttr(0));
-      return builder.create<moore::LTLImplicationIntrinsicOp>(loc, resultType,
-                                                              lhs, delayed);
+          loc, moore::PropertyType::get(context.getContext()), rhs,
+          builder.getI64IntegerAttr(1), builder.getI64IntegerAttr(0));
+      return builder.create<moore::LTLImplicationIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, delayed);
     }
-    case BinaryAssertionOperator::OverlappedFollowedBy:
-      return {};
+    case BinaryAssertionOperator::OverlappedFollowedBy: {
+      // The followed-by operators are the duals of the implication operators.
+      // Therefore, sequence_expr #-# property_expr is equivalent to the
+      // following: not (sequence_expr |-> not property_expr)
+      // See IEEE 1800-2017 § 16.12.9 "Followed-by property"
+      auto notRhs = builder.create<moore::LTLNotIntrinsicOp>(loc, rhsType, rhs);
+      auto lhsImplyNotRhs = builder.create<moore::LTLImplicationIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, notRhs);
+      return builder.create<moore::LTLNotIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhsImplyNotRhs);
+    }
     case BinaryAssertionOperator::NonOverlappedFollowedBy:
-      return {};
+      // and sequence_expr #=# property_expr is equivalent to the following:
+      // not (sequence_expr |=> not property_expr)
+      // See IEEE 1800-2017 § 16.12.9 "Followed-by property"
+      auto notRhs = builder.create<moore::LTLNotIntrinsicOp>(loc, rhsType, rhs);
+      auto delayOp = builder.create<moore::LTLDelayIntrinsicOp>(
+          loc, moore::SequenceType::get(context.getContext()), notRhs,
+          builder.getI64IntegerAttr(1), builder.getI64IntegerAttr(0));
+      auto implyOp = builder.create<moore::LTLImplicationIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), lhs, delayOp);
+      return builder.create<moore::LTLNotIntrinsicOp>(
+          loc, moore::PropertyType::get(context.getContext()), implyOp);
     }
 
     return {};
@@ -1015,7 +1080,7 @@ struct RvalueExprVisitor {
     case slang::ast::UnaryAssertionOperator::Not:
       return builder.create<moore::LTLNotIntrinsicOp>(loc, operand.getType(),
                                                       operand);
-    case slang::ast::UnaryAssertionOperator::Eventually:
+    case slang::ast::UnaryAssertionOperator::SEventually:
       return builder.create<moore::LTLEventuallyIntrinsicOp>(
           loc, moore::PropertyType::get(context.getContext()), operand);
     default:
@@ -1349,5 +1414,15 @@ Value Context::convertAssertionExpression(
   auto loc = convertLocation(expr.syntax->sourceRange());
 
   auto visitor = RvalueExprVisitor(*this, loc);
-  return expr.visit(visitor);
+  auto value = expr.visit(visitor);
+  if (!value)
+    return {};
+  auto type = dyn_cast<moore::IntType>(value.getType());
+  if (type) {
+    if (type.getWidth() != 1)
+      value = builder.create<moore::BoolCastOp>(loc, value);
+    if (type.getDomain() == moore::Domain::FourValued)
+      value = builder.create<moore::LogicToBitOp>(loc, value);
+  }
+  return value;
 }

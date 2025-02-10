@@ -1514,6 +1514,25 @@ def CoverConcurrentOp : ConcurrentVerifOp<"cover.concurrent",
   }];
 }
 
+def LogicToBitOp : MooreOp<"logic_to_bit", [
+  Pure,
+]> {
+  let summary = "Cast a value to a single bit boolean";
+  let description = [{
+    Convert a nonzero or true value into 1, a zero or false value into 0, and
+    any value containing Z or X bits into a 0. This conversion is useful in
+    combination with the logical and, or, implication, equivalence, and negation
+    operators.
+
+    See IEEE 1800-2017 § 16.6 "Boolean expressions".
+  }];
+  let arguments = (ins SimpleBitVectorType:$input);
+  let results = (outs BitType:$result);
+  let assemblyFormat = [{
+    $input attr-dict `:` type($input) `->` type($result)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // LTL Dialect Sequence and Property Intrinsics
 //===----------------------------------------------------------------------===//

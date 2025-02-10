@@ -449,11 +449,11 @@ def BitType : MooreType<CPred<[{
   }];
 }
 
-def LTLAnySequenceType : MooreType<Or<[AnySingleBitType.predicate,
+def LTLAnySequenceType : MooreType<Or<[BitType.predicate,
                                        LTLSequenceType.predicate]>,
   "any sequence type", "moore::UnpackedType">;
 
-def LTLAnyPropertyType : MooreType<Or<[AnySingleBitType.predicate,
+def LTLAnyPropertyType : MooreType<Or<[BitType.predicate,
                                        LTLSequenceType.predicate,
                                        LTLPropertyType.predicate]>,
   "any property type", "moore::UnpackedType">;
