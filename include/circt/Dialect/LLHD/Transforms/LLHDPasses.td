@@ -109,6 +109,10 @@ def Sig2Reg : Pass<"llhd-sig2reg", "hw::HWModuleOp"> {
   let dependentDialects = ["circt::hw::HWDialect", "circt::comb::CombDialect"];
 }
 
+def Mem2RegPass : Pass<"llhd-mem2reg"> {
+  let summary = "Promotes memory and signal slots into values.";
+}
+
 def TemporalCodeMotion : Pass<"llhd-temporal-code-motion", "hw::HWModuleOp"> {
   let summary = "move drive operations to the exit basic block in processes";
   let description = [{
@@ -145,6 +149,10 @@ def Desequentialization : Pass<"llhd-desequentialize", "hw::HWModuleOp"> {
   let dependentDialects = [
     "comb::CombDialect", "hw::HWDialect", "seq::SeqDialect"
   ];
+}
+
+def HoistSignalsPass : Pass<"llhd-hoist-signals"> {
+  let summary = "Hoist probes and promote drives to process results";
 }
 
 #endif // CIRCT_DIALECT_LLHD_TRANSFORMS_PASSES
